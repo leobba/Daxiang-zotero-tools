@@ -1,21 +1,40 @@
 name: Release
 
+# 推送 v 开头的 tag 时触发，例如：git tag v0.2.0 && git push origin v0.2.0
 on:
   push:
     tags:
-      - v**
+      - "v*"
 
+# 创建 Release 与上传资产需要写权限
 permissions:
   contents: write
-  issues: write
-  pull-requests: write
 
 jobs:
-  create-release:
-    uses: zotero-plugin-dev/workflows/.github/workflows/release-plugin.yml@main
-    # You can customize any of the inputs here.
-    # If you omit an input, its default value will be used.
-    with:
-      build: "npm run build"
-      release: "npm run release"
-    secrets: inherit
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # zotero-plugin release 在 CI 里的行为（见 scaffold 源码注释）：
+      #   · 不 bump 版本、不碰 git
+      #   · 用 package.json 的 version 建 tag 为 v<version> 的 Release，并上传 xpi
+      #   · 另外维护一个 tag 固定为 release 的 Release，专门托管 update.json
+      #     （Zotero 的 update_url 指向的就是那个固定地址）
+      - name: Create GitHub Release
+        run: npm run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

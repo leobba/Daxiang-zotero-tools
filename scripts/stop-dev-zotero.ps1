@@ -1,4 +1,4 @@
-# 只结束「开发/测试用的 Zotero 实例」，**绝不动用户自己正在用的 Zotero**。
+﻿# 只结束「开发/测试用的 Zotero 实例」，**绝不动用户自己正在用的 Zotero**。
 #
 # 为什么需要它：跑 `npm test` / `npm start` 前要确保没有残留实例占用 profile，
 # 但简单粗暴地 `Get-Process zotero | Stop-Process` 会把用户自己开的 Zotero 一起杀掉。

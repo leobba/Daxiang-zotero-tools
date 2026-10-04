@@ -1,4 +1,4 @@
-# 截取开发实例的 Zotero 偏好设置窗口（只截该窗口，不含桌面其它内容）。
+﻿# 截取开发实例的 Zotero 偏好设置窗口（只截该窗口，不含桌面其它内容）。
 # 用 PrintWindow 渲染，不依赖窗口是否在最前，避免抓到别的窗口。
 #
 # 用法: pwsh -File scripts/capture-prefs.ps1 [-OutPath <png>]
