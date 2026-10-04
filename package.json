@@ -1,0 +1,71 @@
+{
+  "name": "myzoterotools",
+  "type": "module",
+  "version": "0.2.0",
+  "private": true,
+  "description": "MyZoteroTools — 自用 Zotero 插件（分类聚合 / 阅读状态 / 数据包导出 / 库体检 / 结构化字段 / 元数据清洗）",
+  "config": {
+    "addonName": "MyZoteroTools",
+    "addonID": "myzoterotools@personal.local",
+    "addonRef": "myzoterotools",
+    "addonInstance": "MyZoteroTools",
+    "prefsPrefix": "extensions.zotero.myzoterotools"
+  },
+  "author": "leobba",
+  "homepage": "https://github.com/leobba/myzoterotools",
+  "_comment_repository": "zotero-plugin-scaffold 会无条件解析这里的 owner/repo，用来填 updateURL 与 xpiDownloadLink 里的 {{owner}}/{{repo}} 模板变量。所以【仓库地址只需要改这一处】。",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leobba/myzoterotools.git"
+  },
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "start": "zotero-plugin serve",
+    "build": "zotero-plugin build && tsc --noEmit",
+    "lint:check": "prettier --check . && eslint .",
+    "lint:fix": "prettier --write . && eslint . --fix",
+    "test": "zotero-plugin test",
+    "release": "zotero-plugin release",
+    "release:patch": "zotero-plugin release patch -y",
+    "release:minor": "zotero-plugin release minor -y",
+    "release:major": "zotero-plugin release major -y"
+  },
+  "dependencies": {
+    "zotero-plugin-toolkit": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.10.0",
+    "@zotero-plugin/eslint-config": "^0.6.7",
+    "chai": "^6.2.1",
+    "eslint": "^9.39.2",
+    "mocha": "^11.7.5",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3",
+    "zotero-plugin-scaffold": "^0.8.2",
+    "zotero-types": "^4.1.3"
+  },
+  "_comment_overrides": "zotero-types 通过 git 依赖引用 pdfjs-dist / epubjs（github: 协议）。本机 GitHub git 通道不可达且 npm 12 默认 allow-git=none，故用嵌套 overrides 重定向到 npm 上的等价版本。注意：必须用嵌套写法（扁平写法对 epubjs 不生效），且首次安装前需删除上游锁文件。",
+  "overrides": {
+    "zotero-types": {
+      "pdfjs-dist": "npm:pdfjs-dist@5.4.624",
+      "epubjs": "npm:epubjs@0.3.93"
+    }
+  },
+  "prettier": {
+    "printWidth": 80,
+    "tabWidth": 2,
+    "endOfLine": "lf",
+    "overrides": [
+      {
+        "files": [
+          "*.xhtml"
+        ],
+        "options": {
+          "htmlWhitespaceSensitivity": "css"
+        }
+      }
+    ]
+  }
+}

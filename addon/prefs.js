@@ -1,0 +1,42 @@
+// 默认首选项。构建时 scaffold 会自动加上 extensions.zotero.myzoterotools. 前缀。
+//
+// 每一项都必须在 src/settings/registry.ts 里声明（否则设置面板不会显示它），
+// 反之亦然 —— 回归测试会校验两边一致。
+pref("smartRecursion.mode", "emptyOnly");
+pref("summaryBanner.enabled", true);
+pref("summaryBanner.minItems", 0);
+pref("sourceColumn.enabled", true);
+pref("sourceColumn.separator", " · ");
+
+pref("readingStatus.enabled", true);
+// 状态标签的前缀。标签名形如 mzt/todo，Zotero 会把它显示成分组的嵌套标签。
+pref("readingStatus.tagPrefix", "mzt/");
+
+pref("exportBundle.enabled", true);
+pref("exportBundle.includeFulltext", true);
+// 留空表示每次导出时弹目录选择框
+pref("exportBundle.outputDir", "");
+
+pref("libraryAudit.enabled", true);
+// 留空表示把体检报告写到 Zotero 数据目录
+pref("libraryAudit.outputDir", "");
+
+pref("metadataClean.enabled", true);
+// 去掉标题/期刊名里的 HTML 标签（顺带能让 Zotero 的重复检测恢复工作）
+pref("metadataClean.fixHtml", true);
+// 把 language 的多种写法收敛成 BCP-47（zh-CN / en）
+pref("metadataClean.normalizeLanguage", true);
+
+pref("structuredFields.enabled", true);
+// 结构化字段在条目 Extra 里的前缀，形如 "mzt.载体类型: 聚脲微囊"
+pref("structuredFields.prefix", "mzt.");
+// 留空表示每次导出时弹目录选择框
+pref("structuredFields.outputDir", "");
+
+// 开发用开关（不出现在设置面板里）。打开方式：在开发 profile 的 prefs.js 里写入
+//   user_pref("extensions.zotero.myzoterotools.dev.openPrefsOnStart", true);
+//   user_pref("extensions.zotero.myzoterotools.dev.initialCategory", "itemList");
+// 前者让开发实例启动后自动弹出设置面板，后者让它直接打开指定分类页，
+// 调界面时不用每次手点菜单。
+pref("dev.openPrefsOnStart", false);
+pref("dev.initialCategory", "");

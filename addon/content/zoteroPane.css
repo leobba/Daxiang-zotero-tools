@@ -1,0 +1,57 @@
+/*
+ * 主窗口样式（条目信息面板里的「结构化字段」区块）。
+ *
+ * ⚠️ 为什么需要手动注入：
+ * 偏好设置面板有官方的 `stylesheets` 选项，但**主窗口没有** ——
+ * Zotero 的插件基础设施 issue #5755（CSS/Fluent 注入）至今 open，
+ * 所以只能由插件自己往主窗口 document 里插一个 <link rel="stylesheet">。
+ * 注入代码见 src/hooks.ts 的 onMainWindowLoad。
+ *
+ * 类名统一带 mzt- 前缀，只作用于本插件生成的元素。
+ */
+
+.mzt-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mzt-field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+}
+
+.mzt-field-name {
+  flex: 0 0 auto;
+  min-width: 6em;
+  color: var(--fill-secondary);
+  font-size: 0.92em;
+}
+
+.mzt-field-value {
+  flex: 1 1 auto;
+  word-break: break-word;
+}
+
+.mzt-field-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mzt-field-remove,
+.mzt-field-add-button {
+  flex: 0 0 auto;
+}
+
+.mzt-fields-empty {
+  color: var(--fill-secondary);
+  font-size: 0.92em;
+}
+
+.mzt-field-add {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--fill-quinary, rgba(0, 0, 0, 0.1));
+}

@@ -1,0 +1,90 @@
+/*
+ * MyZoteroTools 设置面板样式。
+ *
+ * 只做「排版微调」这一件事：控件外观全部交给 Zotero 皮肤（checkbox 用
+ * native="true"、输入框用 textbox、多选一用 radiogroup），这里只补间距、
+ * 次级文字颜色和顶部工具栏的布局。
+ *
+ * 所有类名都带 mzt- 前缀，只作用于本插件面板，不会影响 Zotero 自身界面。
+ */
+
+/* ---------- 顶部工具栏：分类切换 + 搜索 ---------- */
+
+/*
+ * 允许换行：功能变多之后页签会越来越多，一行放不下时应当整块换行，
+ * 而不是把每个页签的文字压成一字一行。
+ */
+.mzt-toolbar {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-block: 0 20px;
+}
+
+/* 分类切换器（水平 radiogroup）内部收紧一点 */
+.mzt-tabs {
+  gap: 2px;
+  flex: 0 1 auto;
+  /*
+   * 页签自己也要能换行：功能变多后一行放不下，
+   * 不换行就会溢出到面板外面（最后一个页签被切掉）。
+   */
+  flex-wrap: wrap;
+}
+
+/*
+ * 页签文字禁止折行。
+ * Zotero 的 radio 内部还有负责显示文字的子元素，所以要连子元素一起限制，
+ * 否则宽度不够时会出现「分/类/聚/合」这种一字一行的排版。
+ */
+.mzt-tabs radio,
+.mzt-tabs radio * {
+  white-space: nowrap;
+}
+
+
+/* ---------- 一条设置 ---------- */
+
+.mzt-setting {
+  margin-block-end: 14px;
+}
+
+/* 左侧标签 + 右侧控件（多选一、输入框用这种排法，与原生面板一致） */
+.mzt-setting-row {
+  gap: 8px;
+}
+
+.mzt-setting-label {
+  min-width: 9em;
+  margin-inline-end: 4px;
+}
+
+.mzt-control-input {
+  min-width: 13em;
+}
+
+/* ---------- 文字层级 ---------- */
+
+/* 分类开头的引导语：与下方第一项拉开距离 */
+.mzt-pref-intro {
+  color: var(--fill-secondary);
+  margin-block: 2px 12px;
+}
+
+/* 设置项下方的说明：次级信息 */
+.mzt-pref-desc {
+  color: var(--fill-secondary);
+  font-size: 0.92em;
+  line-height: 1.55;
+  max-width: 46em;
+  margin-block: 2px 0;
+  margin-inline-start: 4px;
+}
+
+/* 「关于」里的版本号：最弱的一级信息 */
+.mzt-pref-version {
+  color: var(--fill-tertiary);
+  font-size: 0.88em;
+  margin-block: 10px 0;
+}
+
+/* 深色主题下次级色由 --fill-secondary / --fill-tertiary 自动适配，无需额外处理 */

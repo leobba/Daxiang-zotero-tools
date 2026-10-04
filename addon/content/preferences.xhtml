@@ -1,0 +1,16 @@
+<linkset>
+  <html:link rel="localization" href="__addonRef__-preferences.ftl" />
+</linkset>
+
+<!--
+  这里只保留一个空壳：所有设置项、顶部分类切换器和搜索框都由
+  src/settings/pane.ts 按 src/settings/registry.ts 的声明动态生成。
+  这样新增功能时不需要改动任何界面文件。
+
+  链接表（linkset）必须留在这里：FTL 资源要随面板片段一起注册到偏好设置窗口，
+  动态生成出来的元素才能被翻译。
+
+  注意：本文件是 XML，注释里不能出现连续两个连字符，否则整个面板会以
+  "not well-formed XML" 解析失败并变成空白。
+-->
+<vbox id="__addonRef__-preferences-root"></vbox>
