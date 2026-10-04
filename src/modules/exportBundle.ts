@@ -155,7 +155,7 @@ async function buildBundle(
   items: Zotero.Item[],
   parentDir: string,
 ): Promise<BundleResult> {
-  const dir = childPath(parentDir, `MyZoteroTools-export-${timestamp()}`);
+  const dir = childPath(parentDir, `DaxiangZoteroTools-export-${timestamp()}`);
   await Zotero.File.createDirectoryIfMissingAsync(dir);
   await Zotero.File.createDirectoryIfMissingAsync(childPath(dir, "papers"));
 

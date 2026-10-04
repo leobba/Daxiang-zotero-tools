@@ -136,7 +136,7 @@ async function runAudit(): Promise<void> {
       Zotero.DataDirectory.dir;
     await Zotero.File.createDirectoryIfMissingAsync(dir);
     const file = Zotero.File.pathToFile(dir);
-    file.append(`MyZoteroTools-audit-${timestamp()}.md`);
+    file.append(`DaxiangZoteroTools-audit-${timestamp()}.md`);
     await Zotero.File.putContentsAsync(file.path, report.markdown);
     reportPath = file.path;
   } catch (e) {

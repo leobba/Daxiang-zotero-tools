@@ -1,8 +1,18 @@
-# MyZoteroTools
+# Daxiang Zotero Tools
 
-一款自用的 Zotero 插件，按需逐步增加功能。当前版本 `0.1.0`，面向 **Zotero 10**（Firefox 140 ESR 内核）。
+一款自用的 Zotero 插件，按需逐步增加功能。当前版本 `0.2.0`，面向 **Zotero 10**（Firefox 140 ESR 内核）。
+
+仓库：<https://github.com/leobba/Daxiang-zotero-tools>
+
+> 插件在 Zotero 里的显示名是 **Daxiang Zotero Tools**，但**内部 ID 与首选项前缀仍是 `myzoterotools`**
+> （`myzoterotools@personal.local` / `extensions.zotero.myzoterotools.*`）。
+> 这是刻意的：改内部 ID 会让 Zotero 把它当成另一个插件，已有设置与阅读状态标签全部变孤儿。
+
+**安装**：工具 → 插件 → 齿轮 → Install Add-on From File… → 选 xpi → 重启 Zotero。
+装过之后会**自动检查更新**（`update_url` 指向本仓库 Release 里的 `update.json`）。
 
 工程基于社区标准脚手架 [zotero-plugin-template](https://github.com/windingwind/zotero-plugin-template) 搭建，并针对 Zotero 10 做了适配；框架选型的前因后果见 [doc/框架评估.md](doc/框架评估.md)。
+发布与自动更新的完整说明见 [doc/版本管理与自动更新.md](doc/版本管理与自动更新.md)。
 
 ---
 
@@ -76,7 +86,7 @@ Zotero 本身没有「这篇我读没读过」的状态，文献一多只能靠�
 把选中的文献导成一个可以直接喂给大模型的「数据包」：
 
 ```
-MyZoteroTools-export-20261004-130501/
+DaxiangZoteroTools-export-20261004-130501/
   index.csv                元数据总表（带 BOM，Excel 打开中文不乱码）
   papers/0001-ABCD1234.md  每篇一个文件：元数据 + 摘要 + 全文
   papers/0002-EFGH5678.md
@@ -168,7 +178,7 @@ MyZoteroTools-export-20261004-130501/
 界面结构：
 
 ```
-MyZoteroTools                       ← 侧栏一项
+Daxiang Zotero Tools                ← 侧栏一项
 ├ 分类聚合 │ 文献列表 │ 阅读状态 │ 导出 │ 结构化字段 │ 库体检 │ 关于
 └ 当前分类的设置项
 ```
@@ -234,7 +244,7 @@ pwsh -File scripts/capture-prefs.ps1
 3. 选择构建产物 `.scaffold/build/my-zotero-tools.xpi`；
 4. 重启 Zotero。
 
-设置项在 **编辑 → 设置 → MyZoteroTools**，三个功能可分别开关。
+设置项在 **编辑 → 设置 → Daxiang Zotero Tools**，三个功能可分别开关。
 
 ---
 

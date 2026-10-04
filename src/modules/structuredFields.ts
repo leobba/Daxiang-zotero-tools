@@ -321,7 +321,7 @@ async function exportTable(items: Zotero.Item[]): Promise<void> {
 
   try {
     const base = Zotero.File.pathToFile(dir);
-    base.append(`MyZoteroTools-fields-${timestamp()}`);
+    base.append(`DaxiangZoteroTools-fields-${timestamp()}`);
     await Zotero.File.createDirectoryIfMissingAsync(base.path);
 
     const csvFile = Zotero.File.pathToFile(base.path);
