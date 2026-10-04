@@ -99,5 +99,23 @@ setting-clean-language =
     .label = 统一 language 字段
 setting-clean-language-desc = 把同一语言的多种写法（zh / zh-CN / chi / 中文、en / eng / English）收敛成 BCP-47 形式。这个字段会影响 CSL 的引用格式。认不出来的值保持原样，不猜。
 
+settings-tab-update-checker =
+    .label = 更新检查
+settings-tab-update-checker-intro = 本机直连 GitHub 不通，所以更新检查会走加速站。这里可以配置加速站列表，运行时自动测速选最快的。
+setting-update-enabled =
+    .label = 启用「检查更新」
+setting-update-enabled-desc = 在「工具」菜单里增加检查更新命令。它会先对所有更新源测速，用最快的一个拉取版本清单，并用第二个源交叉校验。
+setting-update-proxies = 加速站列表
+setting-update-proxies-desc = 每行一个前缀（如 https://gh-proxy.com/），或写 direct 表示直连。留空则用内置的实测可用列表。运行时会对它们测速。
+setting-update-proxies-placeholder =
+    .placeholder = 留空则用内置列表
+setting-update-verify =
+    .label = 交叉校验清单
+setting-update-verify-desc = 同时从两个不同的加速站拉取版本清单，比对版本号与哈希，两者一致才继续。加速站是第三方中间人，这一步能防止单个站点篡改。
+setting-update-download-dir = 新版下载目录
+setting-update-download-dir-desc = 下载的新版 xpi 存到哪里。留空则存到 Zotero 数据目录。
+setting-update-download-dir-placeholder =
+    .placeholder = 留空则存到数据目录
+
 setting-about-body = 本插件只改变你「看到」的内容：不会把条目移动或复制到父分类，也不改变「从分类中移除条目」的行为。
 settings-version = 版本 { $version }

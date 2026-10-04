@@ -13,6 +13,15 @@ import pkg from "./package.json";
  */
 const TEST_DATA_DIR = ".scaffold/test/data";
 
+/**
+ * GitHub 加速站前缀。实测（2026-10-04）本机直连 github.com 完全不通，
+ * 而下面这个站可用（拉 update.json 约 0.6~0.9s）。
+ *
+ * 设成空字符串 "" 即恢复直连。
+ * 改这里之后必须重新构建 + 重新发布，因为 update_url 会被烘焙进 manifest。
+ */
+const PROXY_PREFIX = "https://gh-proxy.com/";
+
 function seedTestDatabase() {
   const source = process.env.MYZOTEROTOOLS_TEST_DB;
   if (!source || !existsSync(source)) {
@@ -41,18 +50,29 @@ export default defineConfig({
    * `{{owner}}` / `{{repo}}` 是 scaffold 从 package.json 的 `repository.url`
    * 解析出来的模板变量 —— 所以【换仓库只需要改 package.json 那一处】。
    *
-   * 两个地址都指向 GitHub Release 的资产：
-   *   · update.json  由 `npm run release` 生成，Zotero 定期拉取它来比对版本
-   *   · xpi          由 update.json 里的链接指向，Zotero 下载后自动升级
+   * ⚠️ 这里刻意套了一层 **GitHub 加速站**（`PROXY_PREFIX`）：
+   * 本机到 github.com 的连接实测**完全不通**（直连拉 update.json 全部超时），
+   * 不套代理的话 Zotero 的原生自动更新永远拉不到清单，而且是**静默失效**。
    *
-   * ⚠️ 仓库必须是**公开**的：Zotero 拉 update.json 时不会带任何凭据，
-   * 私有仓库的 Release 资产它拿不到，自动更新会静默失效。
+   * 代价与对策：
+   *   · 加速站是第三方中间人，理论上能替换安装包；
+   *   · 但 manifest 里的 update_url 是**写死在已安装插件里、运行时改不了**的，
+   *     所以这里只能固定一个相对可靠的站；
+   *   · 插件内置的「检查更新」功能（src/modules/updateChecker.ts）会在运行时
+   *     对多个加速站测速，并**交叉校验**清单（两个不同站点的 version +
+   *     update_hash 必须一致），比这里写死的这一个更可信。
+   *
+   * 想换加速站：改下面的 PROXY_PREFIX，重新构建并发布。
+   * 想不用代理：把 PROXY_PREFIX 设成空字符串即可。
    */
-  updateURL: `https://github.com/{{owner}}/{{repo}}/releases/download/release/${
+  updateURL: `${PROXY_PREFIX}https://github.com/{{owner}}/{{repo}}/releases/download/release/${
     pkg.version.includes("-") ? "update-beta.json" : "update.json"
   }`,
   xpiDownloadLink:
-    "https://github.com/{{owner}}/{{repo}}/releases/download/v{{version}}/{{xpiName}}.xpi",
+    // ⚠️ 必须是 `v{{version}}` —— Release 的 tag 带 v 前缀（v0.2.1）。
+    //    写成 `{{version}}` 会得到 .../download/0.2.1/... 直接 404，
+    //    而 Zotero 的更新失败是**静默**的，很难发现。
+    `${PROXY_PREFIX}https://github.com/{{owner}}/{{repo}}/releases/download/v{{version}}/{{xpiName}}.xpi`,
 
   build: {
     assets: ["addon/**/*.*"],

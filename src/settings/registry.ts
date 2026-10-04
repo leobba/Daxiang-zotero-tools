@@ -193,6 +193,40 @@ export const SETTINGS_CATEGORIES: SettingCategory[] = [
   },
 
   {
+    id: "updateChecker",
+    tabKey: "settings-tab-update-checker",
+    introKey: "settings-tab-update-checker-intro",
+    items: [
+      {
+        key: "updateChecker.enabled",
+        kind: "checkbox",
+        labelKey: "setting-update-enabled",
+        descKey: "setting-update-enabled-desc",
+      },
+      {
+        key: "updateChecker.proxies",
+        kind: "text",
+        labelKey: "setting-update-proxies",
+        descKey: "setting-update-proxies-desc",
+        placeholderKey: "setting-update-proxies-placeholder",
+      },
+      {
+        key: "updateChecker.verifyWithSecondSource",
+        kind: "checkbox",
+        labelKey: "setting-update-verify",
+        descKey: "setting-update-verify-desc",
+      },
+      {
+        key: "updateChecker.downloadDir",
+        kind: "text",
+        labelKey: "setting-update-download-dir",
+        descKey: "setting-update-download-dir-desc",
+        placeholderKey: "setting-update-download-dir-placeholder",
+      },
+    ],
+  },
+
+  {
     id: "about",
     tabKey: "settings-tab-about",
     notes: [{ key: "setting-about-body" }],

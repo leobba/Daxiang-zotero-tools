@@ -10,6 +10,7 @@ import * as exportBundle from "./modules/exportBundle";
 import * as libraryAudit from "./modules/libraryAudit";
 import * as structuredFields from "./modules/structuredFields";
 import * as metadataClean from "./modules/metadataClean";
+import * as updateChecker from "./modules/updateChecker";
 
 /**
  * 生命周期总调度。
@@ -38,6 +39,7 @@ async function onStartup() {
     libraryAudit,
     structuredFields,
     metadataClean,
+    updateChecker,
   };
 
   await registerPrefsPane();
@@ -62,6 +64,9 @@ async function onStartup() {
 
   // 功能⑧：元数据清洗（去 HTML 标签 / 统一 language）——「工具」菜单
   metadataClean.register();
+
+  // 功能⑨：检查更新（含加速站测速）——「工具」菜单
+  updateChecker.register();
 
   // 功能②需要在每个主窗口上工作
   await Promise.all(
@@ -143,6 +148,7 @@ function injectStyleSheet(doc: Document): void {
 
 function onShutdown(): void {
   summaryBanner.teardown();
+  updateChecker.unregister();
   metadataClean.unregister();
   structuredFields.unregister();
   libraryAudit.unregister();

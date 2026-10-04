@@ -22,6 +22,10 @@ declare namespace _ZoteroTypes {
       "metadataClean.enabled": boolean;
       "metadataClean.fixHtml": boolean;
       "metadataClean.normalizeLanguage": boolean;
+      "updateChecker.enabled": boolean;
+      "updateChecker.proxies": string;
+      "updateChecker.verifyWithSecondSource": boolean;
+      "updateChecker.downloadDir": string;
       "structuredFields.enabled": boolean;
       "structuredFields.prefix": string;
       "structuredFields.outputDir": string;

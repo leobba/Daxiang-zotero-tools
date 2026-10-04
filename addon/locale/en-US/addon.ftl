@@ -57,6 +57,32 @@ clean-confirm-ok = Clean now
 clean-done = Metadata cleanup finished
 clean-done-detail = { $count } item(s) updated
 
+# ---- Feature 9: update check (with proxy speed test) ----
+menu-check-update =
+    .label = Check for updates (with proxy speed test)…
+update-checking = Checking for updates
+update-probing = Speed-testing mirrors…
+update-all-failed = No update source is reachable
+update-all-failed-detail = Tried { $count } sources, none succeeded. Check your network or change the mirror list in settings.
+update-check-failed = Update check failed
+update-latest = You are up to date
+update-latest-detail = Current { $version }, manifest from { $from } ({ $count } usable source(s))
+update-available-title = New version available
+update-available-body = Current { $current }, latest { $latest } (manifest from { $from }).
+update-verify-note = Verification
+update-verified-ok = Cross-checked { $a } against { $b } — both manifests match ✅
+update-verified-mismatch = ⚠️ { $a } and { $b } returned different manifests — aborted (a mirror may be tampered with)
+update-verified-unavailable = Only { $a } is reachable, cross-check not possible ⚠️
+update-verified-direct = Fetched directly from GitHub, no third party ✅
+update-verified-skipped = Cross-check is disabled
+update-confirm-ok = Download it
+update-downloading = Downloading the new version
+update-downloading-detail = { $version } from { $from }
+update-downloaded = New version downloaded
+update-downloaded-detail = { $version } saved to { $path }. Install it via Tools → Add-ons → gear → Install Add-on From File.
+update-download-failed = Download failed
+update-hash-mismatch = The file from { $from } does not match the manifest hash — rejected (possible tampering)
+
 # ---- Feature 7: structured fields ----
 menu-structured-fields =
     .label = Structured fields

@@ -27,6 +27,15 @@ pref("metadataClean.fixHtml", true);
 // 把 language 的多种写法收敛成 BCP-47（zh-CN / en）
 pref("metadataClean.normalizeLanguage", true);
 
+pref("updateChecker.enabled", true);
+// 加速站列表（每行一个前缀，或写 direct 表示直连）。
+// 留空则用内置的实测可用列表。运行时会对它们测速，选最快的。
+pref("updateChecker.proxies", "");
+// 交叉校验：清单同时从两个不同站点拉取并比对，防止单个加速站篡改
+pref("updateChecker.verifyWithSecondSource", true);
+// 下载的新版 xpi 存哪里；留空则存到 Zotero 数据目录
+pref("updateChecker.downloadDir", "");
+
 pref("structuredFields.enabled", true);
 // 结构化字段在条目 Extra 里的前缀，形如 "mzt.载体类型: 聚脲微囊"
 pref("structuredFields.prefix", "mzt.");

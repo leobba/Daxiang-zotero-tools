@@ -6,6 +6,7 @@ import * as exportBundle from "../src/modules/exportBundle";
 import * as libraryAudit from "../src/modules/libraryAudit";
 import * as structuredFields from "../src/modules/structuredFields";
 import * as metadataClean from "../src/modules/metadataClean";
+import * as updateChecker from "../src/modules/updateChecker";
 
 /**
  * 在真实 Zotero 中运行的行为测试（`npm test`）。
@@ -1328,6 +1329,85 @@ describe("MyZoteroTools", function () {
     assert.isTrue(
       ids.some((id) => id.includes(`${config.addonRef}-metadata-clean`)),
       `工具菜单里没有元数据清洗命令。已注册: ${ids.join(", ") || "(无)"}`,
+    );
+  });
+
+  /* ------------------------------------------------------------------ */
+  /* 功能⑨：检查更新（含加速站测速）                                     */
+  /* ------------------------------------------------------------------ */
+
+  it("更新检查：版本号比较逻辑正确", function () {
+    const cmp = updateChecker.compareVersions;
+    assert.isAbove(cmp("0.3.0", "0.2.1"), 0, "0.3.0 应大于 0.2.1");
+    assert.isBelow(cmp("0.2.1", "0.3.0"), 0, "0.2.1 应小于 0.3.0");
+    assert.equal(cmp("0.2.1", "0.2.1"), 0, "同版本应相等");
+    assert.isAbove(
+      cmp("0.10.0", "0.9.0"),
+      0,
+      "0.10.0 应大于 0.9.0（按数字比而非字典序）",
+    );
+    assert.isBelow(cmp("0.2.1", "0.2.1-beta.1"), 0, "正式版应小于同号预发布版");
+    assert.isAbove(cmp("1.0.0", "0.99.99"), 0);
+  });
+
+  /**
+   * 加速站列表的解析：支持每行一个前缀、也支持 `direct`，
+   * 并且**直连永远排在第一个**（能用就是最好的，不经第三方）。
+   */
+  it("更新检查：加速站列表解析正确", function () {
+    const sources = updateChecker.listSources();
+    assert.isAbove(sources.length, 1, "至少要有一个直连 + 一个加速站");
+    assert.isTrue(sources[0].direct, "直连必须排在第一个");
+    assert.equal(
+      sources[0].resolve("https://example.com/x"),
+      "https://example.com/x",
+      "直连应原样返回，不加任何前缀",
+    );
+
+    const proxied = sources.filter((source) => !source.direct);
+    assert.isAbove(proxied.length, 0, "没有解析出任何加速站");
+    for (const source of proxied) {
+      const resolved = source.resolve("https://example.com/x");
+      assert.include(
+        resolved,
+        "https://example.com/x",
+        `加速站的地址必须把原始 URL 完整保留在前缀之后，实际: ${resolved}`,
+      );
+      assert.notEqual(
+        resolved,
+        "https://example.com/x",
+        "加速站不应原样返回（那样等于没走代理）",
+      );
+      assert.include(
+        resolved,
+        source.label,
+        `解析后的地址应包含该站点的域名 ${source.label}，实际: ${resolved}`,
+      );
+    }
+  });
+
+  /** 清单地址必须由 package.json 的 repository.url 推导，且指向固定 tag `release` */
+  it("更新检查：清单地址指向固定 tag 的 Release", function () {
+    assert.include(
+      updateChecker.MANIFEST_URL,
+      "/releases/download/release/update.json",
+      `清单地址不对: ${updateChecker.MANIFEST_URL}`,
+    );
+    assert.include(
+      updateChecker.MANIFEST_URL,
+      "Daxiang-zotero-tools",
+      "清单地址没有指向本仓库",
+    );
+  });
+
+  it("更新检查：命令已注册在「工具」菜单", function () {
+    const options: any[] = (
+      Zotero.MenuManager as any
+    )._menuManager.getCustomMenuOptions("main/menubar/tools");
+    const ids = options.map((option) => String(option.menuID));
+    assert.isTrue(
+      ids.some((id) => id.includes(`${config.addonRef}-update-check`)),
+      `工具菜单里没有检查更新命令。已注册: ${ids.join(", ") || "(无)"}`,
     );
   });
 });

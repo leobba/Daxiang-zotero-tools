@@ -57,6 +57,32 @@ clean-confirm-ok = 开始清洗
 clean-done = 元数据清洗完成
 clean-done-detail = 已更新 { $count } 条文献
 
+# ---- 功能⑨：检查更新（含加速站测速）----
+menu-check-update =
+    .label = 检查更新（含加速站测速）…
+update-checking = 正在检查更新
+update-probing = 正在对加速站测速…
+update-all-failed = 所有更新源都不可用
+update-all-failed-detail = 试了 { $count } 个源都没成功。请检查网络，或在设置里换一组加速站。
+update-check-failed = 检查更新失败
+update-latest = 已是最新版本
+update-latest-detail = 当前 { $version }，清单来自 { $from }（共 { $count } 个源可用）
+update-available-title = 发现新版本
+update-available-body = 当前版本 { $current }，最新版本 { $latest }（清单来自 { $from }）。
+update-verify-note = 校验
+update-verified-ok = 已用 { $a } 与 { $b } 交叉校验，两站清单一致 ✅
+update-verified-mismatch = ⚠️ { $a } 与 { $b } 返回的清单不一致，已中止（可能有站点被篡改）
+update-verified-unavailable = 只有 { $a } 一个源可用，无法交叉校验 ⚠️
+update-verified-direct = 走 GitHub 直连，未经第三方 ✅
+update-verified-skipped = 已关闭交叉校验
+update-confirm-ok = 下载新版本
+update-downloading = 正在下载新版本
+update-downloading-detail = { $version}，来自 { $from }
+update-downloaded = 新版本已下载
+update-downloaded-detail = { $version } 已存到 { $path }。请用「工具 → 插件 → 齿轮 → Install Add-on From File」安装。
+update-download-failed = 下载失败
+update-hash-mismatch = { $from } 返回的文件哈希与清单不符，已拒绝（可能被篡改）
+
 # ---- 功能⑦：结构化字段 ----
 menu-structured-fields =
     .label = 结构化字段

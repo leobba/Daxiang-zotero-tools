@@ -99,5 +99,23 @@ setting-clean-language =
     .label = Normalize the language field
 setting-clean-language-desc = Collapses the many spellings of one language (zh / zh-CN / chi / 中文, en / eng / English) into BCP-47. This field affects CSL citation formatting. Unrecognized values are left untouched — nothing is guessed.
 
+settings-tab-update-checker =
+    .label = Update Check
+settings-tab-update-checker-intro = Direct GitHub access is blocked on this machine, so update checks go through mirrors. Configure the mirror list here; the fastest one is picked at runtime.
+setting-update-enabled =
+    .label = Enable "Check for updates"
+setting-update-enabled-desc = Adds a check-for-updates command to the Tools menu. It speed-tests every source first, fetches the version manifest from the fastest one, and cross-checks it against a second source.
+setting-update-proxies = Mirror list
+setting-update-proxies-desc = One prefix per line (e.g. https://gh-proxy.com/), or "direct" for a direct connection. Leave empty to use the built-in list of verified mirrors. All of them are speed-tested at runtime.
+setting-update-proxies-placeholder =
+    .placeholder = leave empty for the built-in list
+setting-update-verify =
+    .label = Cross-check the manifest
+setting-update-verify-desc = Fetches the manifest from two different mirrors and compares version and hash; only continues if they agree. Mirrors are third-party intermediaries, so this guards against a single tampered mirror.
+setting-update-download-dir = Download folder for new versions
+setting-update-download-dir-desc = Where the downloaded xpi is saved. Leave empty to use the Zotero data directory.
+setting-update-download-dir-placeholder =
+    .placeholder = leave empty for the data directory
+
 setting-about-body = This plugin only changes what you see. It never moves or copies items into the parent collection, and it does not change "Remove Item from Collection" behaviour.
 settings-version = Version { $version }
