@@ -1,7 +1,7 @@
 {
   "name": "daxiang-zotero-tools",
   "type": "module",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Daxiang Zotero Tools — 自用 Zotero 插件（分类聚合 / 阅读状态 / 数据包导出 / 库体检 / 结构化字段 / 元数据清洗）",
   "config": {
