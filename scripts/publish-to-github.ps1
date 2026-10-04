@@ -1,4 +1,4 @@
-﻿# 一键完成 GitHub 建库 → 推送 → 打 tag → 触发发布。
+# 一键完成 GitHub 建库 → 推送 → 打 tag → 触发发布。
 #
 # 前提：项目根目录的 .env 里有 GITHUB_TOKEN（classic token，scope 需要 repo + workflow）。
 # 用法：pwsh -NoProfile -File scripts/publish-to-github.ps1
@@ -6,7 +6,7 @@
 # 这个脚本是幂等的：仓库已存在就跳过建库，remote 已配就更新，tag 已存在就跳过。
 param(
   [string]$Owner = "leobba",
-  [string]$Repo = "myzoterotools",
+  [string]$Repo = "Daxiang-zotero-tools",
   [string]$Tag = "",
   [switch]$SkipTag
 )

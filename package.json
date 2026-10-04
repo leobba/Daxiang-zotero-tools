@@ -1,22 +1,23 @@
 {
-  "name": "myzoterotools",
+  "name": "daxiang-zotero-tools",
   "type": "module",
   "version": "0.2.0",
   "private": true,
-  "description": "MyZoteroTools — 自用 Zotero 插件（分类聚合 / 阅读状态 / 数据包导出 / 库体检 / 结构化字段 / 元数据清洗）",
+  "description": "Daxiang Zotero Tools — 自用 Zotero 插件（分类聚合 / 阅读状态 / 数据包导出 / 库体检 / 结构化字段 / 元数据清洗）",
   "config": {
-    "addonName": "MyZoteroTools",
+    "addonName": "Daxiang Zotero Tools",
+    "_comment_addonID": "插件 ID 与 addonRef 刻意保持不变：它们决定 Zotero 眼里的插件身份与首选项前缀（extensions.zotero.myzoterotools.*）。改了会让已装插件变成「另一个插件」，现有设置与状态标签全部变孤儿。显示名（addonName）与内部 ID 本来就可以不一致。",
     "addonID": "myzoterotools@personal.local",
     "addonRef": "myzoterotools",
     "addonInstance": "MyZoteroTools",
     "prefsPrefix": "extensions.zotero.myzoterotools"
   },
   "author": "leobba",
-  "homepage": "https://github.com/leobba/myzoterotools",
+  "homepage": "https://github.com/leobba/Daxiang-zotero-tools",
   "_comment_repository": "zotero-plugin-scaffold 会无条件解析这里的 owner/repo，用来填 updateURL 与 xpiDownloadLink 里的 {{owner}}/{{repo}} 模板变量。所以【仓库地址只需要改这一处】。",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/leobba/myzoterotools.git"
+    "url": "git+https://github.com/leobba/Daxiang-zotero-tools.git"
   },
   "license": "AGPL-3.0-or-later",
   "scripts": {
