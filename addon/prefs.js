@@ -42,6 +42,15 @@ pref("structuredFields.prefix", "mzt.");
 // 留空表示每次导出时弹目录选择框
 pref("structuredFields.outputDir", "");
 
+pref("intake.enabled", true);
+// 任务分类：agent 入库到这个分类的条目会被自动补元数据 / 找 PDF。
+// 支持分类名（除草剂）或完整路径（农药/国标）。**切任务时改这里**。
+pref("intake.taskCollection", "");
+// 自动为新条目查找可用 PDF（走 Zotero 的解析器链，含机构代理）
+pref("intake.autoFindPdf", true);
+// 处理 Extra 里的 mzt.pendingDoi 标记：用 Zotero 翻译器抓元数据并原地补全
+pref("intake.resolveMetadata", true);
+
 // 开发用开关（不出现在设置面板里）。打开方式：在开发 profile 的 prefs.js 里写入
 //   user_pref("extensions.zotero.myzoterotools.dev.openPrefsOnStart", true);
 //   user_pref("extensions.zotero.myzoterotools.dev.initialCategory", "itemList");

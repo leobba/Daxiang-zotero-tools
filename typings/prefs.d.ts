@@ -29,6 +29,10 @@ declare namespace _ZoteroTypes {
       "structuredFields.enabled": boolean;
       "structuredFields.prefix": string;
       "structuredFields.outputDir": string;
+      "intake.enabled": boolean;
+      "intake.taskCollection": string;
+      "intake.autoFindPdf": boolean;
+      "intake.resolveMetadata": boolean;
       "dev.openPrefsOnStart": boolean;
       "dev.initialCategory": string;
     };

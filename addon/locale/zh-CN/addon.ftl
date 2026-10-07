@@ -114,3 +114,13 @@ structured-import-no-key = CSV 缺少 key 列
 structured-import-no-key-hint = 第一行必须是表头，且要有一列名为 key（Zotero 条目 key）
 structured-imported = 导入完成
 structured-imported-detail = 更新 { $count } 条，跳过 { $skipped } 条
+
+# ---- 功能⑩：文献自动入库（agent ↔ Zotero 衔接）----
+menu-intake-find-pdf =
+    .label = 为任务分类补找 PDF（缺 PDF 的条目）…
+intake-no-collection = 没有配置任务分类
+intake-no-collection-hint = 请到 编辑 → 设置 → Daxiang Zotero Tools → 文献入库 里填写任务分类名（如「除草剂」或「农药/国标」）。
+intake-all-have-pdf = 该分类下所有条目都已有 PDF
+intake-searching = 正在查找可用 PDF
+intake-searching-detail = 分类「{ $name }」下有 { $count } 条缺 PDF，正在查找…
+

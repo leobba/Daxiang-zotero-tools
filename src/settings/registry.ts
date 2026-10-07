@@ -227,6 +227,39 @@ export const SETTINGS_CATEGORIES: SettingCategory[] = [
   },
 
   {
+    id: "intake",
+    tabKey: "settings-tab-intake",
+    introKey: "settings-tab-intake-intro",
+    items: [
+      {
+        key: "intake.enabled",
+        kind: "checkbox",
+        labelKey: "setting-intake-enabled",
+        descKey: "setting-intake-enabled-desc",
+      },
+      {
+        key: "intake.taskCollection",
+        kind: "text",
+        labelKey: "setting-intake-collection",
+        descKey: "setting-intake-collection-desc",
+        placeholderKey: "setting-intake-collection-placeholder",
+      },
+      {
+        key: "intake.autoFindPdf",
+        kind: "checkbox",
+        labelKey: "setting-intake-find-pdf",
+        descKey: "setting-intake-find-pdf-desc",
+      },
+      {
+        key: "intake.resolveMetadata",
+        kind: "checkbox",
+        labelKey: "setting-intake-metadata",
+        descKey: "setting-intake-metadata-desc",
+      },
+    ],
+  },
+
+  {
     id: "about",
     tabKey: "settings-tab-about",
     notes: [{ key: "setting-about-body" }],

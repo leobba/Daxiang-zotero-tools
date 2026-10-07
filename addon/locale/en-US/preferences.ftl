@@ -119,3 +119,20 @@ setting-update-download-dir-placeholder =
 
 setting-about-body = This plugin only changes what you see. It never moves or copies items into the parent collection, and it does not change "Remove Item from Collection" behaviour.
 settings-version = Version { $version }
+
+settings-tab-intake =
+    .label = Literature Intake
+settings-tab-intake-intro = Lets items found by an agent flow into your library and get their PDFs automatically. The agent creates items via Zotero's Local API; the plugin fills in metadata and finds PDFs.
+setting-intake-enabled =
+    .label = Enable automatic intake
+setting-intake-enabled-desc = Watches new items: anything landing in the "task collection" is processed automatically. An agent can also bypass the collection by writing mzt.intake: 1 into the item's Extra.
+setting-intake-collection = Task collection
+setting-intake-collection-desc = Where the current task's items should go. Accepts a name ("除草剂") or a full path ("农药/国标"). Change it when you switch tasks.
+setting-intake-collection-placeholder =
+    .placeholder = e.g. 除草剂 or 农药/国标
+setting-intake-find-pdf =
+    .label = Find available PDFs automatically
+setting-intake-find-pdf-desc = Runs Zotero's own "Find Available PDF" on new items (uses its resolver chain, including your institution proxy settings). Items still without a PDF get tagged "mzt/需手动获取PDF" instead of pretending to succeed.
+setting-intake-metadata =
+    .label = Fill metadata with Zotero translators
+setting-intake-metadata-desc = When an item's Extra contains mzt.pendingDoi: 10.xxxx/yyyy, the Zotero search translator fetches its metadata and fills the item in place (key and collections unchanged). Best for Chinese papers, theses and standards that OpenAlex covers poorly.

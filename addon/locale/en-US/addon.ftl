@@ -114,3 +114,12 @@ structured-import-no-key = The CSV has no "key" column
 structured-import-no-key-hint = The first row must be a header including a column named "key" (the Zotero item key)
 structured-imported = Import finished
 structured-imported-detail = { $count } updated, { $skipped } skipped
+
+# ---- Feature 10: literature intake (agent <-> Zotero bridge) ----
+menu-intake-find-pdf =
+    .label = Find missing PDFs for the task collection…
+intake-no-collection = No task collection configured
+intake-no-collection-hint = Set it in Edit → Settings → Daxiang Zotero Tools → Literature Intake, e.g. "除草剂" or "农药/国标".
+intake-all-have-pdf = Every item in that collection already has a PDF
+intake-searching = Finding available PDFs
+intake-searching-detail = { $count } item(s) in "{ $name }" have no PDF; searching…

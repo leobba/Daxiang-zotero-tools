@@ -11,6 +11,7 @@ import * as libraryAudit from "./modules/libraryAudit";
 import * as structuredFields from "./modules/structuredFields";
 import * as metadataClean from "./modules/metadataClean";
 import * as updateChecker from "./modules/updateChecker";
+import * as literatureIntake from "./modules/literatureIntake";
 
 /**
  * 生命周期总调度。
@@ -40,6 +41,7 @@ async function onStartup() {
     structuredFields,
     metadataClean,
     updateChecker,
+    literatureIntake,
   };
 
   await registerPrefsPane();
@@ -67,6 +69,9 @@ async function onStartup() {
 
   // 功能⑨：检查更新（含加速站测速）——「工具」菜单
   updateChecker.register();
+
+  // 功能⑩：文献自动入库（agent ↔ Zotero 衔接）
+  literatureIntake.register();
 
   // 功能②需要在每个主窗口上工作
   await Promise.all(
@@ -148,6 +153,7 @@ function injectStyleSheet(doc: Document): void {
 
 function onShutdown(): void {
   summaryBanner.teardown();
+  literatureIntake.unregister();
   updateChecker.unregister();
   metadataClean.unregister();
   structuredFields.unregister();

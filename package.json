@@ -1,9 +1,9 @@
 {
   "name": "daxiang-zotero-tools",
   "type": "module",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
-  "description": "Daxiang Zotero Tools — 自用 Zotero 插件（分类聚合 / 阅读状态 / 数据包导出 / 库体检 / 结构化字段 / 元数据清洗 / 更新检查）",
+  "description": "Daxiang Zotero Tools — 自用 Zotero 插件（分类聚合 / 阅读状态 / 数据包导出 / 库体检 / 结构化字段 / 元数据清洗 / 更新检查 / 文献入库）",
   "config": {
     "addonName": "Daxiang Zotero Tools",
     "_comment_addonID": "插件 ID 与 addonRef 刻意保持不变：它们决定 Zotero 眼里的插件身份与首选项前缀（extensions.zotero.myzoterotools.*）。改了会让已装插件变成「另一个插件」，现有设置与状态标签全部变孤儿。显示名（addonName）与内部 ID 本来就可以不一致。",

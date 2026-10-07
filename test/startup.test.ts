@@ -7,6 +7,7 @@ import * as libraryAudit from "../src/modules/libraryAudit";
 import * as structuredFields from "../src/modules/structuredFields";
 import * as metadataClean from "../src/modules/metadataClean";
 import * as updateChecker from "../src/modules/updateChecker";
+import * as literatureIntake from "../src/modules/literatureIntake";
 
 /**
  * 在真实 Zotero 中运行的行为测试（`npm test`）。
@@ -1408,6 +1409,130 @@ describe("MyZoteroTools", function () {
     assert.isTrue(
       ids.some((id) => id.includes(`${config.addonRef}-update-check`)),
       `工具菜单里没有检查更新命令。已注册: ${ids.join(", ") || "(无)"}`,
+    );
+  });
+
+  /* ------------------------------------------------------------------ */
+  /* 功能⑩：文献自动入库（agent ↔ Zotero 衔接）                          */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Extra 标记是 agent ↔ 插件之间的**协议**，解析必须稳。
+   * agent 会用 Local API 往 Extra 里写 `mzt.pendingDoi: 10.xxxx/yyyy`。
+   */
+  it("文献入库：能解析 Extra 里的 mzt.* 标记", async function () {
+    const item = await firstRegularItem();
+    const original = String(item.getField("extra") ?? "");
+
+    try {
+      item.setField(
+        "extra",
+        `一些别的内容\n${literatureIntake.PENDING_DOI_KEY}: 10.1016/j.cej.2026.178700\n另一行`,
+      );
+      await item.saveTx();
+
+      assert.equal(
+        literatureIntake.parseExtraMarker(
+          item,
+          literatureIntake.PENDING_DOI_KEY,
+        ),
+        "10.1016/j.cej.2026.178700",
+        "没有正确解析出 DOI",
+      );
+      assert.isNull(
+        literatureIntake.parseExtraMarker(
+          item,
+          literatureIntake.INTAKE_FLAG_KEY,
+        ),
+        "不存在的标记应返回 null",
+      );
+
+      // 大小写与空格容错（agent 手写 Extra 时很容易多空格）
+      item.setField("extra", "  MZT.PendingDOI :   10.1/abc  ");
+      await item.saveTx();
+      assert.equal(
+        literatureIntake.parseExtraMarker(
+          item,
+          literatureIntake.PENDING_DOI_KEY,
+        ),
+        "10.1/abc",
+        "应容忍大小写与多余空格",
+      );
+
+      // intake 标记（agent 用它绕过任务分类）
+      item.setField("extra", `${literatureIntake.INTAKE_FLAG_KEY}: 1`);
+      await item.saveTx();
+      assert.equal(
+        literatureIntake.parseExtraMarker(
+          item,
+          literatureIntake.INTAKE_FLAG_KEY,
+        ),
+        "1",
+      );
+    } finally {
+      item.setField("extra", original);
+      await item.saveTx();
+    }
+  });
+
+  /**
+   * 任务分类解析：支持「分类名」和「完整路径」两种写法。
+   * ⚠️ 必须用 getAllIDs + getAsync —— getByLibrary 只返回内存缓存里的分类
+   * （库体检曾栽在这上面，只看到 31 个分类里的 16 个）。
+   */
+  it("文献入库：任务分类能按名称与路径解析", async function () {
+    const libraryID = Zotero.Libraries.userLibraryID;
+    const ids: number[] = await (Zotero.Collections as any).getAllIDs(
+      libraryID,
+    );
+    const all = (
+      (await (Zotero.Collections as any).getAsync(ids)) ?? []
+    ).filter((collection: any) => collection && !collection.deleted);
+    assert.isAbove(all.length, 0, "测试库里没有分类");
+
+    const top = all.find((collection: any) => !collection.parentID);
+    assert.ok(top, "没有顶层分类");
+
+    const prefKey = `${PREFS_PREFIX}.intake.taskCollection`;
+    const original = String(Zotero.Prefs.get(prefKey, true) ?? "");
+    try {
+      // 按名称
+      Zotero.Prefs.set(prefKey, top.name, true);
+      const byName = await literatureIntake.resolveTaskCollection();
+      assert.ok(byName, `按名称「${top.name}」没解析出分类`);
+      assert.equal(byName.name, top.name);
+
+      // 按路径
+      const child = all.find(
+        (collection: any) => collection.parentID === top.id,
+      );
+      if (child) {
+        Zotero.Prefs.set(prefKey, `${top.name}/${child.name}`, true);
+        const byPath = await literatureIntake.resolveTaskCollection();
+        assert.ok(byPath, `按路径「${top.name}/${child.name}」没解析出分类`);
+        assert.equal(byPath.id, child.id, "路径解析到了错误的分类");
+      }
+
+      // 不存在时返回 null 而不是抛异常
+      Zotero.Prefs.set(prefKey, "zzz不存在的分类zzz", true);
+      assert.isNull(await literatureIntake.resolveTaskCollection());
+
+      // 留空时也返回 null（未配置任务分类）
+      Zotero.Prefs.set(prefKey, "", true);
+      assert.isNull(await literatureIntake.resolveTaskCollection());
+    } finally {
+      Zotero.Prefs.set(prefKey, original, true);
+    }
+  });
+
+  it("文献入库：命令已注册在「工具」菜单", function () {
+    const options: any[] = (
+      Zotero.MenuManager as any
+    )._menuManager.getCustomMenuOptions("main/menubar/tools");
+    const ids = options.map((option) => String(option.menuID));
+    assert.isTrue(
+      ids.some((id) => id.includes(`${config.addonRef}-intake`)),
+      `工具菜单里没有文献入库命令。已注册: ${ids.join(", ") || "(无)"}`,
     );
   });
 });

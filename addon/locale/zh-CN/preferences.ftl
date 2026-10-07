@@ -119,3 +119,20 @@ setting-update-download-dir-placeholder =
 
 setting-about-body = 本插件只改变你「看到」的内容：不会把条目移动或复制到父分类，也不改变「从分类中移除条目」的行为。
 settings-version = 版本 { $version }
+
+settings-tab-intake =
+    .label = 文献入库
+settings-tab-intake-intro = 让 agent 检索到的文献自动进库并下载 PDF。agent 通过 Zotero 的 Local API 建条目，插件负责补元数据与找 PDF。
+setting-intake-enabled =
+    .label = 启用自动入库
+setting-intake-enabled-desc = 监听新条目：落在「任务分类」下的条目会被自动处理。agent 也可以不通过分类，改为在条目 Extra 里写 mzt.intake: 1 来指定。
+setting-intake-collection = 任务分类
+setting-intake-collection-desc = 当前任务要入库到哪个分类。支持分类名（除草剂）或完整路径（农药/国标）。换任务时改这里。
+setting-intake-collection-placeholder =
+    .placeholder = 例如：除草剂 或 农药/国标
+setting-intake-find-pdf =
+    .label = 自动查找可用 PDF
+setting-intake-find-pdf-desc = 对新条目调用 Zotero 的「查找可用 PDF」（走它的解析器链，包含你的机构代理设置）。仍然找不到的条目会被打上标签「mzt/需手动获取PDF」，不会假装成功。
+setting-intake-metadata =
+    .label = 用 Zotero 翻译器补元数据
+setting-intake-metadata-desc = 条目 Extra 里写了 mzt.pendingDoi: 10.xxxx/yyyy 时，用 Zotero 的检索翻译器抓元数据并原地补全（条目 key 与分类不变）。适合中文文献、学位论文、标准等 OpenAlex 覆盖不好的类型。
