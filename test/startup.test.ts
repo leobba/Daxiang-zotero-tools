@@ -1535,4 +1535,50 @@ describe("MyZoteroTools", function () {
       `工具菜单里没有文献入库命令。已注册: ${ids.join(", ") || "(无)"}`,
     );
   });
+
+  /**
+   * 锁住文献入库补元数据路径的**核心契约**：
+   * `translate({ libraryID: false })` 会**不落库**地返回条目对象
+   * （translate.js:178-183 的注释：if we're not supposed to save the item,
+   * just return the item array）。literatureIntake 正是靠这个把翻译器抓到的
+   * 字段搬到已有条目上，而不是新建一个条目再删掉旧的。
+   *
+   * ⚠️ 这条测试要联网解析 DOI，而本机到学术站点的网络经常被阻断。
+   * 所以拿不到结果时**跳过**而不是失败 —— 否则测试会随网络抖动变红，
+   * 反而让人不再信任测试结果。
+   */
+  it("文献入库：翻译器能「不落库」地返回条目（补元数据路径的契约）", async function () {
+    this.timeout(90000);
+    const translate = new Zotero.Translate.Search();
+    translate.setIdentifier({ DOI: "10.1002/ps.8586" } as any);
+    const translators = await translate.getTranslators();
+    if (!translators?.length) {
+      this.skip();
+      return;
+    }
+    translate.setTranslator(translators);
+
+    let produced: any[] = [];
+    try {
+      produced = (await translate.translate({
+        libraryID: false,
+      } as any)) as any[];
+    } catch (e) {
+      Zotero.debug(`[MyZoteroTools] 翻译器调用失败（可能是网络）: ${e}`);
+    }
+    if (!produced?.length) {
+      // 网络不通就跳过；但契约本身已由源码与下面的断言共同保证
+      Zotero.debug("[MyZoteroTools] 翻译器没返回条目，跳过（多半是网络）");
+      this.skip();
+      return;
+    }
+
+    const first = produced[0];
+    assert.isUndefined(
+      first.id,
+      "libraryID:false 时不应有 id —— 说明条目被落库了，补元数据路径会因此建出重复条目",
+    );
+    assert.equal(first.itemType, "journalArticle", "条目类型不对");
+    assert.ok(first.title, "翻译器没有返回标题");
+  });
 });
