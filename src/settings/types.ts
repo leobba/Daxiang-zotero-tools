@@ -21,6 +21,27 @@ export interface SettingOption {
   labelKey: FluentMessageId;
 }
 
+/**
+ * 动态生成的选项（值 + 已经算好的文案）。
+ *
+ * 与 SettingOption 的区别：这里没有 FTL key —— 分类名是**用户数据**，
+ * 不是可翻译的界面文案，所以直接给最终字符串。
+ */
+export interface DynamicOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * 动态选项的来源名。
+ *
+ * ⚠️ 为什么用「来源名」而不是直接塞一个函数：
+ * registry 是**纯声明**的数据（测试要能直接遍历比对），塞函数会破坏这个性质。
+ * 而且列分类是**异步**的（`Collections.getAllIDs` 返回 Promise），
+ * 但 `buildSetting` 是同步的 —— 所以由 pane.ts 在渲染前统一加载好再传下来。
+ */
+export type OptionsSource = "collections";
+
 /** 单个设置项 */
 export interface SettingDescriptor {
   /** 绑定的 pref 键，例如 "smartRecursion.mode" */
@@ -30,8 +51,10 @@ export interface SettingDescriptor {
   labelKey: FluentMessageId;
   /** 说明文字，显示在控件下方（可选，但强烈建议写） */
   descKey?: FluentMessageId;
-  /** kind = "menulist" 时的选项 */
+  /** kind = "menulist" 时的静态选项 */
   options?: SettingOption[];
+  /** kind = "menulist" 时的动态选项来源（与 options 二选一） */
+  optionsSource?: OptionsSource;
   /** kind = "text" 时的占位符 */
   placeholderKey?: FluentMessageId;
   /** kind = "number" 的取值范围 */

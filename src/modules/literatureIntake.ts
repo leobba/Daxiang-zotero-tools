@@ -372,7 +372,8 @@ function hasPdf(item: Zotero.Item): boolean {
 /**
  * 解析「任务分类」设置。
  *
- * 支持两种写法：
+ * 设置里存的是**分类 key**（下拉选择时写入的），key 稳定、改名后依然有效。
+ * 但为了兼容早期版本手填的名称，也支持：
  *   · 分类名：`除草剂`（同名多个时取第一个，并打日志）
  *   · 完整路径：`农药/国标`
  *
@@ -382,13 +383,6 @@ function hasPdf(item: Zotero.Item): boolean {
 async function resolveTaskCollection(): Promise<any | null> {
   const spec = String(getPref("intake.taskCollection") ?? "").trim();
   if (!spec) {
-    return null;
-  }
-  const parts = spec
-    .split("/")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  if (!parts.length) {
     return null;
   }
 
@@ -405,16 +399,34 @@ async function resolveTaskCollection(): Promise<any | null> {
     return null;
   }
 
+  // 1) 先按 key 找（下拉选择写入的就是 key）
+  const byKey = all.find((collection: any) => collection.key === spec);
+  if (byKey) {
+    return byKey;
+  }
+
+  // 2) 回退：按名称或路径解析（兼容手填的旧值）
+  const parts = spec
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (!parts.length) {
+    return null;
+  }
+
   const wantedName = parts[parts.length - 1];
   const candidates = all.filter((collection) => collection.name === wantedName);
   if (!candidates.length) {
-    Zotero.debug(`[MyZoteroTools] 找不到任务分类「${spec}」`);
+    Zotero.debug(
+      `[MyZoteroTools] 找不到任务分类「${spec}」（既不是有效的分类 key，也没有同名分类）`,
+    );
     return null;
   }
   if (parts.length === 1) {
     if (candidates.length > 1) {
       Zotero.debug(
-        `[MyZoteroTools] 有 ${candidates.length} 个同名分类「${wantedName}」，取 id=${candidates[0].id}`,
+        `[MyZoteroTools] 有 ${candidates.length} 个同名分类「${wantedName}」，取 id=${candidates[0].id}。` +
+          `建议改用设置里的下拉选择，避免选错。`,
       );
     }
     return candidates[0];

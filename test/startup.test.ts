@@ -8,6 +8,7 @@ import * as structuredFields from "../src/modules/structuredFields";
 import * as metadataClean from "../src/modules/metadataClean";
 import * as updateChecker from "../src/modules/updateChecker";
 import * as literatureIntake from "../src/modules/literatureIntake";
+import * as optionSources from "../src/settings/optionSources";
 
 /**
  * 在真实 Zotero 中运行的行为测试（`npm test`）。
@@ -1534,6 +1535,198 @@ describe("MyZoteroTools", function () {
       ids.some((id) => id.includes(`${config.addonRef}-intake`)),
       `工具菜单里没有文献入库命令。已注册: ${ids.join(", ") || "(无)"}`,
     );
+  });
+
+  /**
+   * 任务分类改成了下拉选择，存的是**分类 key**。
+   * 这条保证「key 能解析回分类」—— 分类改名后设置依然有效。
+   */
+  it("文献入库：任务分类存 key 时也能解析（改名后依然有效）", async function () {
+    const libraryID = Zotero.Libraries.userLibraryID;
+    const ids: number[] = await (Zotero.Collections as any).getAllIDs(
+      libraryID,
+    );
+    const all = (
+      (await (Zotero.Collections as any).getAsync(ids)) ?? []
+    ).filter((collection: any) => collection && !collection.deleted);
+    const target = all.find((collection: any) => collection.key);
+    assert.ok(target, "测试库里没有分类");
+
+    const prefKey = `${PREFS_PREFIX}.intake.taskCollection`;
+    const original = String(Zotero.Prefs.get(prefKey, true) ?? "");
+    try {
+      Zotero.Prefs.set(prefKey, target.key, true);
+      const resolved = await literatureIntake.resolveTaskCollection();
+      assert.ok(resolved, `按 key「${target.key}」没解析出分类`);
+      assert.equal(resolved.id, target.id, "解析到了错误的分类");
+    } finally {
+      Zotero.Prefs.set(prefKey, original, true);
+    }
+  });
+
+  /**
+   * 下拉选项必须来自真实分类，且值用 **key**、标签用**完整路径**。
+   *
+   * 为什么强调这两点：
+   *   · 值用 key —— 库里有同名分类时（复制分类树之后很常见）按名字解析会选错，
+   *     而且 key 在改名后依然有效
+   *   · 标签用完整路径 —— 否则下拉里两个「除草剂」根本分不清是哪个
+   */
+  it("设置：分类下拉的选项来自真实分类，值是 key、标签是完整路径", async function () {
+    const options = await optionSources.collectionOptions();
+
+    assert.equal(options[0].value, "", "第一项应当是空值（不使用）");
+
+    const real = options.slice(1);
+    const libraryID = Zotero.Libraries.userLibraryID;
+    const ids: number[] = await (Zotero.Collections as any).getAllIDs(
+      libraryID,
+    );
+    const all = (
+      (await (Zotero.Collections as any).getAsync(ids)) ?? []
+    ).filter((collection: any) => collection && !collection.deleted);
+    assert.equal(
+      real.length,
+      all.length,
+      `下拉选项数 ${real.length} 与存活分类数 ${all.length} 不一致`,
+    );
+
+    const keys = new Set(all.map((c: any) => c.key));
+    for (const option of real) {
+      assert.isTrue(
+        keys.has(option.value),
+        `选项值 ${option.value} 不是真实分类 key`,
+      );
+      assert.isTrue(option.label.length > 0, "选项标签不能为空");
+    }
+    assert.equal(
+      new Set(real.map((o) => o.value)).size,
+      real.length,
+      "下拉选项的值有重复",
+    );
+
+    // 有子分类时标签应当是「父 / 子」形式
+    const child = all.find((c: any) => c.parentID);
+    if (child) {
+      const option = real.find((o) => o.value === child.key);
+      assert.ok(option, "子分类没有出现在下拉里");
+      assert.include(
+        option.label,
+        " / ",
+        `子分类的标签应当是完整路径，实际: ${option.label}`,
+      );
+    }
+  });
+
+  /** registry 里声明的动态来源必须都能加载出内容，否则下拉会是空的 */
+  it("设置：registry 声明的动态选项来源都能加载出内容", async function () {
+    const sources: string[] = [];
+    for (const category of SETTINGS_CATEGORIES) {
+      for (const item of category.items ?? []) {
+        if (item.optionsSource) {
+          sources.push(item.optionsSource);
+        }
+      }
+    }
+    assert.isAbove(sources.length, 0, "registry 里没有声明任何动态选项来源");
+
+    const index = await optionSources.loadOptionIndex(sources as any);
+    for (const source of sources) {
+      const options = (index as any)[source];
+      assert.isArray(options, `来源「${source}」没有加载出数组`);
+      assert.isAbove(
+        options.length,
+        1,
+        `来源「${source}」只有 ${options?.length} 个选项，下拉会是空的`,
+      );
+    }
+  });
+
+  /** 任务分类必须是下拉，不能是输入框 —— 手填名字在同名分类时会选错 */
+  it("设置：任务分类是下拉控件且绑定了动态来源", function () {
+    const category = SETTINGS_CATEGORIES.find((c) => c.id === "intake");
+    assert.ok(category, "没有文献入库分类");
+    const item = (category.items ?? []).find(
+      (i) => String(i.key) === "intake.taskCollection",
+    );
+    assert.ok(item, "没有任务分类设置项");
+    assert.equal(item.kind, "menulist", "任务分类必须是下拉选择");
+    assert.equal(
+      item.optionsSource,
+      "collections",
+      "任务分类必须绑定 collections 动态来源",
+    );
+  });
+
+  /**
+   * 【核心】面板里真的渲染出了**有内容**的下拉。
+   *
+   * 这条比截图可靠：截图依赖窗口状态，而这里直接检查 DOM。
+   * 之前的问题是任务分类是个空输入框，用户没法选分类。
+   */
+  it("设置：任务分类在面板里渲染成有选项的下拉", async function () {
+    const doc = await openPaneAndGetDocument();
+
+    const controlID = `zotero-prefpane-${config.addonRef}-intake-taskCollection`;
+    const list: any = doc.getElementById(controlID);
+    assert.ok(list, `面板里找不到任务分类控件 #${controlID}`);
+    assert.equal(
+      list.localName,
+      "menulist",
+      `任务分类应当是下拉，实际是 <${list.localName}>`,
+    );
+
+    const items = Array.from(list.querySelectorAll("menuitem")) as any[];
+    assert.isAbove(
+      items.length,
+      1,
+      `下拉里只有 ${items.length} 个选项（应当包含「不使用」+ 库里所有分类）`,
+    );
+
+    // 第一项是「不使用」
+    assert.equal(
+      items[0].getAttribute("value"),
+      "",
+      "第一项应当是空值（不使用）",
+    );
+
+    // 其余选项的值必须是真实的分类 key
+    const libraryID = Zotero.Libraries.userLibraryID;
+    const ids: number[] = await (Zotero.Collections as any).getAllIDs(
+      libraryID,
+    );
+    const all = (
+      (await (Zotero.Collections as any).getAsync(ids)) ?? []
+    ).filter((collection: any) => collection && !collection.deleted);
+    const keys = new Set(all.map((c: any) => c.key));
+    const real = items.slice(1);
+    assert.equal(
+      real.length,
+      all.length,
+      `下拉选项数 ${real.length} 与存活分类数 ${all.length} 不一致`,
+    );
+    for (const item of real) {
+      const value = item.getAttribute("value");
+      assert.isTrue(keys.has(value), `选项值 ${value} 不是真实分类 key`);
+      assert.isTrue(
+        (item.getAttribute("label") ?? "").length > 0,
+        "选项没有标签",
+      );
+    }
+
+    // 标签应当是完整路径（含子分类时出现「 / 」）
+    const child = all.find((c: any) => c.parentID);
+    if (child) {
+      const option = real.find(
+        (i: any) => i.getAttribute("value") === child.key,
+      );
+      assert.ok(option, "子分类没有出现在下拉里");
+      assert.include(
+        option.getAttribute("label"),
+        " / ",
+        `子分类的标签应当是完整路径，实际: ${option.getAttribute("label")}`,
+      );
+    }
   });
 
   /**

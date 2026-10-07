@@ -15,7 +15,8 @@
 import { config } from "../../package.json";
 import { getLocaleID } from "../utils/locale";
 import type { FluentMessageId } from "../../typings/i10n";
-import type { SettingDescriptor } from "./types";
+import type { DynamicOption, SettingDescriptor } from "./types";
+import type { OptionIndex } from "./optionSources";
 
 export interface BuiltSetting {
   /** 外层容器；搜索过滤以它为最小显示单位 */
@@ -31,7 +32,15 @@ export { buildSetting, createPrefBinding, setL10n };
 /* 构建                                                                */
 /* ------------------------------------------------------------------ */
 
-function buildSetting(doc: Document, item: SettingDescriptor): BuiltSetting {
+/**
+ * @param dynamicOptions 动态选项（如分类列表）。由 pane.ts 在渲染前异步加载好传进来 ——
+ *   因为 `Collections.getAllIDs()` 是异步的，而本函数是同步的。
+ */
+function buildSetting(
+  doc: Document,
+  item: SettingDescriptor,
+  dynamicOptions?: OptionIndex,
+): BuiltSetting {
   const wrap = createXUL(doc, "vbox");
   wrap.classList.add("mzt-setting");
   wrap.setAttribute("data-mzt-key", String(item.key));
@@ -43,7 +52,7 @@ function buildSetting(doc: Document, item: SettingDescriptor): BuiltSetting {
       wrap.append(control);
       break;
     case "menulist":
-      control = buildMenulist(doc, item);
+      control = buildMenulist(doc, item, dynamicOptions);
       wrap.append(buildLabelledRow(doc, item, control));
       break;
     default:
@@ -96,16 +105,42 @@ function buildTextbox(doc: Document, item: SettingDescriptor): Element {
   return box;
 }
 
-function buildMenulist(doc: Document, item: SettingDescriptor): Element {
+function buildMenulist(
+  doc: Document,
+  item: SettingDescriptor,
+  dynamicOptions?: OptionIndex,
+): Element {
   const list = createXUL(doc, "menulist");
   list.setAttribute("id", controlId(item));
   const popup = createXUL(doc, "menupopup");
-  for (const option of item.options ?? []) {
-    const menuItem = createXUL(doc, "menuitem");
-    menuItem.setAttribute("value", option.value);
-    setL10n(menuItem, option.labelKey);
-    popup.append(menuItem);
+
+  // 静态选项（options）与动态选项（optionsSource）二选一
+  if (item.optionsSource) {
+    const options: DynamicOption[] = dynamicOptions?.[item.optionsSource] ?? [];
+    for (const option of options) {
+      const menuItem = createXUL(doc, "menuitem");
+      menuItem.setAttribute("value", option.value);
+      // 分类名是用户数据，没有 FTL key，直接写 label 属性
+      menuItem.setAttribute("label", option.label);
+      popup.append(menuItem);
+    }
+    if (!options.length) {
+      // 一个分类都没有时给个占位，避免出现完全空的下拉
+      const menuItem = createXUL(doc, "menuitem");
+      menuItem.setAttribute("value", "");
+      menuItem.setAttribute("label", "");
+      menuItem.setAttribute("disabled", "true");
+      popup.append(menuItem);
+    }
+  } else {
+    for (const option of item.options ?? []) {
+      const menuItem = createXUL(doc, "menuitem");
+      menuItem.setAttribute("value", option.value);
+      setL10n(menuItem, option.labelKey);
+      popup.append(menuItem);
+    }
   }
+
   list.append(popup);
   return list;
 }

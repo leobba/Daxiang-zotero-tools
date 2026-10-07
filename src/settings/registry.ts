@@ -238,11 +238,14 @@ export const SETTINGS_CATEGORIES: SettingCategory[] = [
         descKey: "setting-intake-enabled-desc",
       },
       {
+        // 下拉选择，选项由 optionSources.ts 在渲染前从库里异步取。
+        // 存的是**分类 key**（稳定，改名后设置依然有效），不是名字 ——
+        // 库里有同名分类时按名字解析可能选错。
         key: "intake.taskCollection",
-        kind: "text",
+        kind: "menulist",
+        optionsSource: "collections",
         labelKey: "setting-intake-collection",
         descKey: "setting-intake-collection-desc",
-        placeholderKey: "setting-intake-collection-placeholder",
       },
       {
         key: "intake.autoFindPdf",

@@ -80,7 +80,6 @@ export type FluentMessageId =
   | 'setting-export-output-dir-placeholder'
   | 'setting-intake-collection'
   | 'setting-intake-collection-desc'
-  | 'setting-intake-collection-placeholder'
   | 'setting-intake-enabled'
   | 'setting-intake-enabled-desc'
   | 'setting-intake-find-pdf'

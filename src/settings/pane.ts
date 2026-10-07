@@ -17,8 +17,10 @@ import { config } from "../../package.json";
 import pkg from "../../package.json";
 import { SETTINGS_CATEGORIES } from "./registry";
 import { buildSetting, createPrefBinding, setL10n } from "./controls";
+import { loadOptionIndex } from "./optionSources";
 import type { PrefBinding } from "./controls";
-import type { SettingCategory } from "./types";
+import type { OptionIndex } from "./optionSources";
+import type { OptionsSource, SettingCategory } from "./types";
 
 export { renderPreferencesPane };
 
@@ -40,6 +42,22 @@ let tabsGroup: any = null;
 /** 待绑定的控件；等元素插入文档、翻译完成后再 sync + enable（见下方说明） */
 let pendingBindings: PrefBinding[] = [];
 
+/**
+ * 收集 registry 里声明过的动态选项来源（去重）。
+ * 这样新增一个 `optionsSource` 时不需要再改 pane.ts。
+ */
+function collectOptionSources(): OptionsSource[] {
+  const found = new Set<OptionsSource>();
+  for (const category of SETTINGS_CATEGORIES) {
+    for (const item of category.items ?? []) {
+      if (item.optionsSource) {
+        found.add(item.optionsSource);
+      }
+    }
+  }
+  return [...found];
+}
+
 async function renderPreferencesPane(win: Window): Promise<void> {
   const doc = win.document;
   const root = await waitForRoot(doc);
@@ -55,12 +73,16 @@ async function renderPreferencesPane(win: Window): Promise<void> {
   const fragment = doc.createDocumentFragment();
   fragment.append(buildToolbar(doc));
 
+  // 动态选项（如分类下拉）必须**在构建控件之前**异步取好 ——
+  // Collections.getAllIDs 是异步的，而 buildSetting 是同步的。
+  const dynamicOptions = await loadOptionIndex(collectOptionSources());
+
   const categoriesBox = createXUL(doc, "vbox");
   categoriesBox.setAttribute("id", `${config.addonRef}-preferences-categories`);
   renderedCategories = [];
   pendingBindings = [];
   for (const category of SETTINGS_CATEGORIES) {
-    const built = buildCategory(doc, category);
+    const built = buildCategory(doc, category, dynamicOptions);
     categoriesBox.append(built.el);
     renderedCategories.push(built);
   }
@@ -214,6 +236,7 @@ function clearNativeSearch(doc: Document) {
 function buildCategory(
   doc: Document,
   category: SettingCategory,
+  dynamicOptions?: OptionIndex,
 ): RenderedCategory {
   const section = createXUL(doc, "vbox");
   section.classList.add("main-section");
@@ -232,7 +255,7 @@ function buildCategory(
 
   const settings: Element[] = [];
   for (const item of category.items ?? []) {
-    const built = buildSetting(doc, item);
+    const built = buildSetting(doc, item, dynamicOptions);
     // 绑定推迟到插入文档 + 翻译完成之后执行
     pendingBindings.push(createPrefBinding(built.control, item));
     groupbox.append(built.el);
