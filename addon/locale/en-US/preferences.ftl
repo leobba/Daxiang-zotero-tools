@@ -134,3 +134,5 @@ setting-intake-find-pdf-desc = Runs Zotero's own "Find Available PDF" on new ite
 setting-intake-metadata =
     .label = Fill metadata with Zotero translators
 setting-intake-metadata-desc = When an item's Extra contains mzt.pendingDoi: 10.xxxx/yyyy, the Zotero search translator fetches its metadata and fills the item in place (key and collections unchanged). Best for Chinese papers, theses and standards that OpenAlex covers poorly.
+
+setting-collection-none = (none)

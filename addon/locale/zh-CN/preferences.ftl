@@ -134,3 +134,5 @@ setting-intake-find-pdf-desc = 对新条目调用 Zotero 的「查找可用 PDF�
 setting-intake-metadata =
     .label = 用 Zotero 翻译器补元数据
 setting-intake-metadata-desc = 条目 Extra 里写了 mzt.pendingDoi: 10.xxxx/yyyy 时，用 Zotero 的检索翻译器抓元数据并原地补全（条目 key 与分类不变）。适合中文文献、学位论文、标准等 OpenAlex 覆盖不好的类型。
+
+setting-collection-none = （不使用）

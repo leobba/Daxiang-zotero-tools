@@ -71,6 +71,7 @@ export type FluentMessageId =
   | 'setting-clean-html-desc'
   | 'setting-clean-language'
   | 'setting-clean-language-desc'
+  | 'setting-collection-none'
   | 'setting-export-enabled'
   | 'setting-export-enabled-desc'
   | 'setting-export-fulltext'

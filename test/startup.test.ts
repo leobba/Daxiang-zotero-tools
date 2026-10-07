@@ -191,10 +191,29 @@ function registeredItemMenuIDs(): string[] {
 /** 打开设置面板并返回其 document（面板脚本是异步渲染的，这里等它就绪） */
 async function openPaneAndGetDocument(): Promise<Document> {
   Zotero.Utilities.Internal.openPreferences(`${config.addonRef}-prefpane`);
-  await new Promise((r) => setTimeout(r, 4000));
 
-  const win: any = Services.wm.getMostRecentWindow("zotero:pref");
-  assert.ok(win, "没有找到设置窗口");
+  /*
+   * 轮询等窗口，而不是「睡 4 秒再断言」。
+   *
+   * 固定等待在 Zotero 启动慢时会偶发失败（实测遇到过「没有找到设置窗口」），
+   * 这种抖动会让整套测试的可信度下降 —— 一个偶尔变红的测试等于没有测试。
+   */
+  const deadline = Date.now() + 20000;
+  let win: any = null;
+  while (Date.now() < deadline) {
+    win = Services.wm.getMostRecentWindow("zotero:pref");
+    if (win) {
+      const root = win.document?.getElementById(
+        `${config.addonRef}-preferences-root`,
+      );
+      if (root?.getAttribute("data-mzt-rendered") === "1") {
+        break;
+      }
+    }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+
+  assert.ok(win, "没有找到设置窗口（等了 20 秒）");
   const doc: Document = win.document;
   const root = doc.getElementById(`${config.addonRef}-preferences-root`);
   assert.ok(root, "面板容器不存在");
@@ -1576,6 +1595,10 @@ describe("MyZoteroTools", function () {
     const options = await optionSources.collectionOptions();
 
     assert.equal(options[0].value, "", "第一项应当是空值（不使用）");
+    assert.isTrue(
+      options[0].label.length > 0,
+      "「不使用」选项的标签不能为空 —— 空标签会让下拉显示成一个空白方块（截图时发现）",
+    );
 
     const real = options.slice(1);
     const libraryID = Zotero.Libraries.userLibraryID;

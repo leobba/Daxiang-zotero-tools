@@ -13,6 +13,7 @@
  */
 
 import { config } from "../../package.json";
+import { getString } from "../utils/locale";
 import type { DynamicOption, OptionsSource } from "./types";
 
 export { loadOptionIndex, collectionOptions, EMPTY_OPTION_VALUE };
@@ -104,8 +105,35 @@ async function collectionOptions(): Promise<DynamicOption[]> {
       label: option.label,
     }));
 
-  // 第一项是「不使用」，让用户能清空设置
-  return [{ value: EMPTY_OPTION_VALUE, label: "" }, ...options];
+  /*
+   * 第一项是「不使用」，让用户能清空设置。
+   *
+   * ⚠️ 标签不能留空 —— 未选择时 menulist 会显示当前项的 label，
+   * 空标签会让它看起来是一个**空白方块**，用户根本不知道能不能点（截图验证时发现）。
+   */
+  return [{ value: EMPTY_OPTION_VALUE, label: noneLabel() }, ...options];
+}
+
+/**
+ * 「不使用」的文案。
+ *
+ * ⚠️ 必须包一层 try/catch：`getString` 内部走
+ * `addon.data.locale?.current.formatMessagesSync(...)`，在**测试环境**下
+ * locale 对象存在但 FTL 尚未加载，这个调用会**抛异常**。
+ * 而它一抛，整个 `collectionOptions()` 就失败，下拉直接变成空的
+ * （实测：3 条测试变红，面板里只剩一个占位项）。
+ */
+function noneLabel(): string {
+  try {
+    const value = getString("setting-collection-none");
+    // getString 在拿不到文案时会回退返回 key 本身，这里也当成失败处理
+    if (value && !value.includes("setting-collection-none")) {
+      return value;
+    }
+  } catch (e) {
+    Zotero.debug(`[MyZoteroTools] 读取「不使用」文案失败: ${e}`);
+  }
+  return "（不使用）";
 }
 
 /** 供测试与调试使用：把 registry 里声明过的来源都列出来 */
