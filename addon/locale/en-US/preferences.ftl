@@ -136,3 +136,7 @@ setting-intake-metadata =
 setting-intake-metadata-desc = When an item's Extra contains mzt.pendingDoi: 10.xxxx/yyyy, the Zotero search translator fetches its metadata and fills the item in place (key and collections unchanged). Best for Chinese papers, theses and standards that OpenAlex covers poorly.
 
 setting-collection-none = (none)
+
+setting-intake-tag-extract =
+    .label = Tag "pending extraction" when a PDF arrives
+setting-intake-tag-extract-desc = As soon as an item in the task collection gets a PDF, it is tagged "mzt/待抽取". A downstream agent (workbuddy) polls for that tag, then swaps it for "mzt/已抽取" when done. The state lives in Zotero, survives restarts, and can be retried.

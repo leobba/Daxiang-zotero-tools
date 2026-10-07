@@ -50,6 +50,9 @@ pref("intake.taskCollection", "");
 pref("intake.autoFindPdf", true);
 // 处理 Extra 里的 mzt.pendingDoi 标记：用 Zotero 翻译器抓元数据并原地补全
 pref("intake.resolveMetadata", true);
+// 任务分类里新增 PDF 时，给父条目打「mzt/待抽取」标签，通知下游 agent 开始抽取。
+// 下游（workbuddy）轮询 Local API 取这些条目，抽完把标签换成「mzt/已抽取」。
+pref("intake.tagForExtraction", true);
 
 // 开发用开关（不出现在设置面板里）。打开方式：在开发 profile 的 prefs.js 里写入
 //   user_pref("extensions.zotero.myzoterotools.dev.openPrefsOnStart", true);

@@ -124,3 +124,8 @@ intake-all-have-pdf = 该分类下所有条目都已有 PDF
 intake-searching = 正在查找可用 PDF
 intake-searching-detail = 分类「{ $name }」下有 { $count } 条缺 PDF，正在查找…
 
+# ---- 待抽取标记（PDF 新增 → 通知下游 agent 抽取）----
+menu-intake-mark-extract =
+    .label = 为任务分类补打「待抽取」标签…
+intake-marked = 待抽取标记完成
+intake-marked-detail = 分类「{ $name }」下有 { $count } 条新标记为待抽取。

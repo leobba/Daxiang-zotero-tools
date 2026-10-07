@@ -123,3 +123,9 @@ intake-no-collection-hint = Set it in Edit → Settings → Daxiang Zotero Tools
 intake-all-have-pdf = Every item in that collection already has a PDF
 intake-searching = Finding available PDFs
 intake-searching-detail = { $count } item(s) in "{ $name }" have no PDF; searching…
+
+# ---- Extraction queue (PDF added -> notify downstream agent) ----
+menu-intake-mark-extract =
+    .label = Tag pending extraction items in the task collection…
+intake-marked = Extraction tags applied
+intake-marked-detail = { $count } item(s) in "{ $name }" newly tagged as pending extraction.

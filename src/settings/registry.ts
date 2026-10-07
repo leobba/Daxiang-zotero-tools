@@ -259,6 +259,12 @@ export const SETTINGS_CATEGORIES: SettingCategory[] = [
         labelKey: "setting-intake-metadata",
         descKey: "setting-intake-metadata-desc",
       },
+      {
+        key: "intake.tagForExtraction",
+        kind: "checkbox",
+        labelKey: "setting-intake-tag-extract",
+        descKey: "setting-intake-tag-extract-desc",
+      },
     ],
   },
 

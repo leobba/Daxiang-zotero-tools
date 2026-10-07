@@ -465,13 +465,38 @@ describe("MyZoteroTools", function () {
     const nativeSearch = doc.getElementById("prefs-search") as any;
     assert.ok(nativeSearch, "设置窗口里没有找到 Zotero 自带的搜索框");
 
-    const runSearch = async (term: string) => {
+    /**
+     * 跑一次 Zotero 自带搜索。
+     *
+     * @param expectHidden 预期本面板**没有匹配**（被标记 hidden-by-search）。
+     *   命中场景不会被标记，所以不能盲等 —— 那会白等满整个超时（实测单条测试 28 秒）。
+     *   只有反向对照才轮询等待标记出现。
+     */
+    const runSearch = async (term: string, expectHidden = false) => {
       nativeSearch.value = term;
       nativeSearch.dispatchEvent(
         new (doc.defaultView as any).Event("command", { bubbles: true }),
       );
-      // Zotero 的 _search 是串行的 async，给足时间
-      await new Promise((r) => setTimeout(r, 900));
+      const root = doc.getElementById(
+        `${config.addonRef}-preferences-root`,
+      ) as any;
+      if (!expectHidden) {
+        // 命中场景：Zotero 的 _search 是串行 async，给足时间让它跑到本面板
+        await new Promise((r) => setTimeout(r, 3000));
+        return;
+      }
+      /*
+       * 反向对照：轮询等到本面板被标记。
+       * 面板数量增加后固定等待不够 —— 表现为「搜不存在的词却没被标记」，
+       * 那是搜索**还没跑到**本面板，不是搜索判据失效。
+       */
+      const deadline = Date.now() + 10000;
+      while (Date.now() < deadline) {
+        if (root?.classList.contains("hidden-by-search")) {
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 100));
+      }
     };
 
     try {
@@ -512,7 +537,7 @@ describe("MyZoteroTools", function () {
 
       // 反向对照：搜一个肯定不存在的词，root 应当被判为不匹配。
       // 没有这一步，「没被标记」也可能只是因为搜索压根没跑到本面板。
-      await runSearch("zzz不存在的词zzz");
+      await runSearch("zzz不存在的词zzz", true);
       assert.isTrue(
         paneRoot.classList.contains("hidden-by-search"),
         "搜索不存在的词时，本面板没有被判为「无匹配」—— " +
@@ -1663,6 +1688,177 @@ describe("MyZoteroTools", function () {
         `来源「${source}」只有 ${options?.length} 个选项，下拉会是空的`,
       );
     }
+  });
+
+  /* ------------------------------------------------------------------ */
+  /* 待抽取标记：PDF 新增 → 打标签 → 通知下游 agent                       */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * 【核心】给任务分类下「有 PDF 但没标记」的条目打上待抽取标签。
+   * 这条链路是「选中分类新增 PDF 就自动抽取」的触发点。
+   */
+  it("待抽取标记：有 PDF 的条目会被打上 mzt/待抽取", async function () {
+    /*
+     * 用 SQL 找「父条目 + 其所在分类」，而不是遍历 collections.getChildItems()。
+     * 后者在本测试环境里拿不到预期的结果（实测找不到任何带 PDF 的条目，
+     * 而库里实际有 88 个 PDF）。现有助手 firstAttachment() 也是走 SQL 的。
+     */
+    const rows = await Zotero.DB.queryAsync(
+      `SELECT ia.parentItemID AS parentID, ci.collectionID AS collectionID
+         FROM itemAttachments ia
+         JOIN collectionItems ci ON ci.itemID = ia.parentItemID
+        WHERE ia.contentType = 'application/pdf'
+          AND ia.parentItemID IS NOT NULL
+          AND ia.itemID NOT IN (SELECT itemID FROM deletedItems)
+          AND ci.collectionID NOT IN (SELECT collectionID FROM deletedCollections)
+        LIMIT 1`,
+    );
+    assert.isAbove(
+      rows?.length ?? 0,
+      0,
+      "测试库里没有「带 PDF 且在分类中」的条目",
+    );
+    const targetItem = (await Zotero.Items.getAsync(
+      rows[0].parentID,
+    )) as Zotero.Item;
+    const target = (await (Zotero.Collections as any).getAsync(
+      rows[0].collectionID,
+    )) as any;
+    assert.ok(targetItem && target, "取条目或分类失败");
+
+    const prefKey = `${PREFS_PREFIX}.intake.taskCollection`;
+    const original = String(Zotero.Prefs.get(prefKey, true) ?? "");
+    const item = targetItem!;
+    // 先清掉可能存在的标签
+    for (const tag of [
+      literatureIntake.PENDING_EXTRACT_TAG,
+      literatureIntake.EXTRACTED_TAG,
+    ]) {
+      if (item.hasTag(tag)) {
+        item.removeTag(tag);
+      }
+    }
+    await item.saveTx();
+
+    try {
+      Zotero.Prefs.set(prefKey, target.key, true);
+      const marked = await literatureIntake.markPendingExtraction([item]);
+      assert.equal(marked, 1, "应当标记 1 条");
+      assert.isTrue(
+        item.hasTag(literatureIntake.PENDING_EXTRACT_TAG),
+        "条目没有被打上待抽取标签",
+      );
+
+      // 幂等：再打一次不应重复计数
+      const again = await literatureIntake.markPendingExtraction([item]);
+      assert.equal(again, 0, "重复调用不应再次标记（幂等性）");
+    } finally {
+      for (const tag of [
+        literatureIntake.PENDING_EXTRACT_TAG,
+        literatureIntake.EXTRACTED_TAG,
+      ]) {
+        if (item.hasTag(tag)) {
+          item.removeTag(tag);
+        }
+      }
+      await item.saveTx();
+      Zotero.Prefs.set(prefKey, original, true);
+    }
+  });
+
+  /** 已抽取的条目不应被打回待抽取（否则下游会重复抽） */
+  it("待抽取标记：已标记 mzt/已抽取 的条目不会被重复标记", async function () {
+    const items = await firstRegularItems(1);
+    const item = items[0];
+    const hadPending = item.hasTag(literatureIntake.PENDING_EXTRACT_TAG);
+    const hadDone = item.hasTag(literatureIntake.EXTRACTED_TAG);
+    try {
+      if (hadPending) item.removeTag(literatureIntake.PENDING_EXTRACT_TAG);
+      item.addTag(literatureIntake.EXTRACTED_TAG, 0);
+      await item.saveTx();
+      const marked = await literatureIntake.markPendingExtraction([item]);
+      assert.equal(marked, 0, "已抽取的条目不应被重新标记");
+    } finally {
+      if (item.hasTag(literatureIntake.EXTRACTED_TAG)) {
+        item.removeTag(literatureIntake.EXTRACTED_TAG);
+      }
+      if (hadPending) item.addTag(literatureIntake.PENDING_EXTRACT_TAG, 0);
+      if (hadDone) item.addTag(literatureIntake.EXTRACTED_TAG, 0);
+      await item.saveTx();
+    }
+  });
+
+  /** 没有 PDF 的条目不该被标记 —— 下游没东西可抽 */
+  it("待抽取标记：没有 PDF 的条目不会被标记", async function () {
+    const item = await firstRegularItem();
+    const hadPending = item.hasTag(literatureIntake.PENDING_EXTRACT_TAG);
+    const attachments = item.getAttachments() ?? [];
+    const hasPdf = attachments
+      .map((id) => Zotero.Items.get(id) as any)
+      .some((a) => a?.isPDFAttachment?.());
+    if (hasPdf) {
+      this.skip();
+      return;
+    }
+    try {
+      const marked = await literatureIntake.markPendingExtraction([item]);
+      assert.equal(marked, 0, "没有 PDF 的条目不应被标记");
+      assert.isFalse(item.hasTag(literatureIntake.PENDING_EXTRACT_TAG));
+    } finally {
+      if (hadPending) item.addTag(literatureIntake.PENDING_EXTRACT_TAG, 0);
+      await item.saveTx();
+    }
+  });
+
+  /** 只对任务分类下的动手（②A）—— pickExtractionTargets 是判定入口 */
+  it("待抽取标记：只挑任务分类下的条目", async function () {
+    const libraryID = Zotero.Libraries.userLibraryID;
+    const ids: number[] = await (Zotero.Collections as any).getAllIDs(
+      libraryID,
+    );
+    const all = (
+      (await (Zotero.Collections as any).getAsync(ids)) ?? []
+    ).filter((collection: any) => collection && !collection.deleted);
+    const withItems = all.find(
+      (c: any) =>
+        (c.getChildItems(false) ?? []).filter((i: Zotero.Item) =>
+          i.isRegularItem?.(),
+        ).length > 0,
+    );
+    assert.ok(withItems, "测试库里没有含条目的分类");
+    const items = (withItems.getChildItems(false) ?? []).filter(
+      (i: Zotero.Item) => i.isRegularItem?.(),
+    );
+
+    const prefKey = `${PREFS_PREFIX}.intake.taskCollection`;
+    const original = String(Zotero.Prefs.get(prefKey, true) ?? "");
+    try {
+      Zotero.Prefs.set(prefKey, withItems.key, true);
+      const picked = await literatureIntake.pickExtractionTargets(items);
+      assert.equal(picked.length, items.length, "任务分类下的条目应全部被选中");
+
+      // 换成别的分类 → 这些条目都不该被选中
+      const other = all.find((c: any) => c.id !== withItems.id);
+      if (other) {
+        Zotero.Prefs.set(prefKey, other.key, true);
+        const none = await literatureIntake.pickExtractionTargets(items);
+        assert.equal(none.length, 0, "不属于任务分类的条目不应被选中");
+      }
+    } finally {
+      Zotero.Prefs.set(prefKey, original, true);
+    }
+  });
+
+  it("待抽取标记：菜单命令已注册在「工具」菜单", function () {
+    const options: any[] = (
+      Zotero.MenuManager as any
+    )._menuManager.getCustomMenuOptions("main/menubar/tools");
+    const ids = options.map((option) => String(option.menuID));
+    assert.isTrue(
+      ids.some((id) => id.includes(`${config.addonRef}-intake`)),
+      `工具菜单里没有文献入库命令。已注册: ${ids.join(", ") || "(无)"}`,
+    );
   });
 
   /** 任务分类必须是下拉，不能是输入框 —— 手填名字在同名分类时会选错 */

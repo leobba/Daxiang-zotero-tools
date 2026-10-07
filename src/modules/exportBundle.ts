@@ -336,7 +336,10 @@ async function getFulltext(item: Zotero.Item): Promise<string> {
       if (!attachment) {
         continue;
       }
-      if (!attachment.isPDF?.() && !attachment.isSnapshot?.()) {
+      if (
+        !attachment.isPDFAttachment?.() &&
+        !attachment.isSnapshotAttachment?.()
+      ) {
         continue;
       }
       const cacheFile = Zotero.Fulltext.getItemCacheFile(attachment);

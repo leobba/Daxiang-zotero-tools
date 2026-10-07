@@ -59,9 +59,13 @@ export {
   flushPending,
   resolveTaskCollection,
   parseExtraMarker,
+  markPendingExtraction,
+  pickExtractionTargets,
   PENDING_DOI_KEY,
   INTAKE_FLAG_KEY,
   MISSING_PDF_TAG,
+  PENDING_EXTRACT_TAG,
+  EXTRACTED_TAG,
 };
 
 /* ------------------------------------------------------------------ */
@@ -111,6 +115,19 @@ function registerMenu(): void {
           void findPdfForTaskCollection();
         },
       },
+      {
+        menuType: "menuitem",
+        l10nID: getLocaleID("menu-intake-mark-extract"),
+        onShowing: (event: any) => {
+          const element = event?.target as any;
+          if (element) {
+            element.hidden = !getPref("intake.enabled");
+          }
+        },
+        onCommand: () => {
+          void markPendingForTaskCollection();
+        },
+      },
     ],
   } as any);
   if (!menuKey) {
@@ -120,7 +137,16 @@ function registerMenu(): void {
 
 /**
  * 监听条目新增事件。
- * agent 用 Local API 建条目后会触发 `item` / `add`，插件据此接手。
+ *
+ * 两条触发路径：
+ *   ① **常规条目**新增 → agent 用 Local API 建条目，插件接手补元数据 / 找 PDF
+ *   ② **PDF 附件**新增 → 给父条目打「待抽取」标签，通知下游 agent 可以开始抽取
+ *
+ * ② 是「选中分类里新增 PDF 就自动抽取」的触发点。
+ * 之所以用**标签**而不是直接调起外部进程：
+ *   · 状态在 Zotero 里可见（用户能看到哪些待抽取、哪些已完成）
+ *   · 重启后状态还在，可重试、可恢复
+ *   · 下游只需 HTTP（Local API），不需要进程权限与路径约定
  */
 function registerNotifier(): void {
   if (notifierID) {
@@ -152,6 +178,95 @@ function registerNotifier(): void {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* 待抽取标记（PDF 新增 → 打标签，供下游 agent 轮询）                    */
+/* ------------------------------------------------------------------ */
+
+/** 待抽取标签 */
+const PENDING_EXTRACT_TAG = "mzt/待抽取";
+/** 抽取完成标签（由下游 agent 写回） */
+const EXTRACTED_TAG = "mzt/已抽取";
+
+/**
+ * 给「任务分类下、有 PDF、还没标记过」的条目打上待抽取标签。
+ *
+ * 幂等：已带 `mzt/待抽取` 或 `mzt/已抽取` 的条目不重复打。
+ */
+async function markPendingExtraction(items: Zotero.Item[]): Promise<number> {
+  if (!getPref("intake.tagForExtraction")) {
+    return 0;
+  }
+  let marked = 0;
+  for (const item of items) {
+    try {
+      if (!item.isRegularItem?.() || item.deleted) {
+        continue;
+      }
+      if (!(await hasPdf(item))) {
+        continue;
+      }
+      const tags = (item.getTags() ?? []).map((t: any) => t.tag);
+      if (tags.includes(PENDING_EXTRACT_TAG) || tags.includes(EXTRACTED_TAG)) {
+        continue;
+      }
+      item.addTag(PENDING_EXTRACT_TAG, 0);
+      await item.saveTx();
+      marked++;
+    } catch (e) {
+      Zotero.debug(`[MyZoteroTools] 打待抽取标签失败 (${item.key}): ${e}`);
+    }
+  }
+  if (marked) {
+    Zotero.debug(`[MyZoteroTools] 已标记 ${marked} 条待抽取`);
+  }
+  return marked;
+}
+
+/**
+ * 把「附件」解析成它所属的常规条目。
+ * PDF 附件新增时，要标记的是**父条目**，不是附件本身。
+ */
+function resolveParentItem(item: Zotero.Item): Zotero.Item | null {
+  try {
+    if (!item.isAttachment?.()) {
+      return item.isRegularItem?.() ? item : null;
+    }
+    const parentID = item.parentItemID;
+    if (!parentID) {
+      return null;
+    }
+    const parent = Zotero.Items.get(parentID) as Zotero.Item | false;
+    return parent && parent.isRegularItem?.() ? parent : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 扫描任务分类，给所有「有 PDF 但没标记」的条目补打标签。
+ * 用于插件当时没开、或历史数据的情况。
+ */
+async function markPendingForTaskCollection(): Promise<void> {
+  const collection = await resolveTaskCollection();
+  if (!collection) {
+    notify(
+      getString("intake-no-collection"),
+      getString("intake-no-collection-hint"),
+    );
+    return;
+  }
+  const items = (collection.getChildItems(false) ?? []).filter(
+    (item: Zotero.Item) => item.isRegularItem?.() && !item.deleted,
+  );
+  const marked = await markPendingExtraction(items);
+  notify(
+    getString("intake-marked"),
+    getString("intake-marked-detail", {
+      args: { count: marked, name: collection.name },
+    }),
+  );
+}
+
 function scheduleFlush(): void {
   if (flushTimer) {
     return;
@@ -180,11 +295,22 @@ async function flushPending(): Promise<void> {
   try {
     const items = (await Zotero.Items.getAsync(ids)) as Zotero.Item[];
     const candidates = items.filter((item) => item && !item.deleted);
-    const targets = await pickTargets(candidates);
-    if (!targets.length) {
-      return;
+
+    /*
+     * 新增的可能是**常规条目**（agent 建条目）也可能是**PDF 附件**
+     * （插件自己找的 PDF、或 agent 上传的 PDF）。
+     * 附件要追溯到父条目，否则「选中分类里新增 PDF 就自动抽取」这条链路接不上。
+     */
+    const fromAttachments = candidates
+      .filter((item) => item.isAttachment?.() && isPdfAttachment(item))
+      .map((attachment) => resolveParentItem(attachment))
+      .filter((parent): parent is Zotero.Item => !!parent);
+    const regularItems = candidates.filter((item) => item.isRegularItem?.());
+
+    const targets = await pickTargets(regularItems);
+    if (targets.length) {
+      Zotero.debug(`[MyZoteroTools] 自动入库：${targets.length} 条需要处理`);
     }
-    Zotero.debug(`[MyZoteroTools] 自动入库：${targets.length} 条需要处理`);
 
     // 1. 先补元数据（有些条目补完才知道该挂什么 PDF）
     if (getPref("intake.resolveMetadata")) {
@@ -195,15 +321,80 @@ async function flushPending(): Promise<void> {
 
     // 2. 再找 PDF（批量一次调用，addAvailableFiles 自带同域限速与进度队列）
     if (getPref("intake.autoFindPdf")) {
-      const needPdf = targets.filter((item) => !hasPdf(item));
+      const needPdf: Zotero.Item[] = [];
+      for (const item of targets) {
+        if (!(await hasPdf(item))) {
+          needPdf.push(item);
+        }
+      }
       if (needPdf.length) {
         await findPdfs(needPdf);
       }
     }
+
+    /*
+     * 3. 最后打「待抽取」标签 —— 必须放在找 PDF **之后**，
+     *    这样刚找到的 PDF 也能立刻触发下游抽取，不用等下一轮。
+     *    判定放在这一步（而不是入口处）是为了拿到「找完 PDF 之后」的真实状态。
+     */
+    const candidatesForExtraction = await pickExtractionTargets([
+      ...fromAttachments,
+      ...targets,
+    ]);
+    await markPendingExtraction(candidatesForExtraction);
   } catch (e) {
     Zotero.logError(e as Error);
   } finally {
     running = false;
+  }
+}
+
+/**
+ * 哪些条目该打「待抽取」标签。
+ *
+ * 与 `pickTargets` 分开：pickTargets 决定「插件要不要动手」，
+ * 这里决定「要不要通知下游抽取」——后者只关心**在任务分类下且有 PDF**。
+ */
+async function pickExtractionTargets(
+  items: Zotero.Item[],
+): Promise<Zotero.Item[]> {
+  const taskCollection = await resolveTaskCollection();
+  const taskID = taskCollection?.id ?? null;
+  const seen = new Set<number>();
+
+  return items.filter((item) => {
+    if (!item || item.deleted || seen.has(item.id)) {
+      return false;
+    }
+    seen.add(item.id);
+    if (!item.isRegularItem?.()) {
+      return false;
+    }
+    // 只对任务分类下的动手（②A）
+    if (taskID === null) {
+      return false;
+    }
+    try {
+      return item.getCollections().includes(taskID);
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * PDF 附件判定。
+ *
+ * ⚠️ 方法名是 **`isPDFAttachment()`**，不是 `isPDF()`。
+ * 写成 `isPDF?.()` 时可选链会**静默返回 undefined**，一律当成 false ——
+ * 表现是「有 PDF 却永远判成没 PDF」，而且不报任何错（实测踩到，
+ * 测试库里有 88 个 PDF，插件一个都认不出来）。
+ */
+function isPdfAttachment(item: Zotero.Item): boolean {
+  try {
+    return !!item.isPDFAttachment?.();
+  } catch {
+    return false;
   }
 }
 
@@ -343,7 +534,7 @@ async function findPdfs(items: Zotero.Item[]): Promise<void> {
   // 复查：仍然没有 PDF 的，打标签标记出来（不假装成功）
   for (const item of items) {
     try {
-      if (hasPdf(item)) {
+      if (await hasPdf(item)) {
         continue;
       }
       item.addTag(MISSING_PDF_TAG, 0);
@@ -354,12 +545,22 @@ async function findPdfs(items: Zotero.Item[]): Promise<void> {
   }
 }
 
-function hasPdf(item: Zotero.Item): boolean {
+/**
+ * 条目是否有 PDF 附件。
+ *
+ * ⚠️ 必须用**异步**的 `Zotero.Items.getAsync`，不能用同步的 `Zotero.Items.get` ——
+ * 后者对**未加载到内存缓存**的条目直接返回 `false`，于是「有 PDF」会被误判成
+ * 「没有 PDF」。实测：测试库里有 88 个 PDF，但同步版一个都认不出来
+ * （表现为条目永远不被打「待抽取」标签、还反复被当成「缺 PDF」）。
+ */
+async function hasPdf(item: Zotero.Item): Promise<boolean> {
   try {
-    return (item.getAttachments() ?? []).some((id) => {
-      const attachment = Zotero.Items.get(id) as any;
-      return attachment?.isPDF?.();
-    });
+    const ids = item.getAttachments() ?? [];
+    if (!ids.length) {
+      return false;
+    }
+    const attachments = (await Zotero.Items.getAsync(ids)) as any[];
+    return attachments.some((attachment) => attachment?.isPDFAttachment?.());
   } catch {
     return false;
   }
@@ -465,9 +666,16 @@ async function findPdfForTaskCollection(): Promise<void> {
     );
     return;
   }
-  const items = (collection.getChildItems(false) ?? []).filter(
-    (item: Zotero.Item) => item.isRegularItem?.() && !hasPdf(item),
+  const candidates = (collection.getChildItems(false) ?? []).filter(
+    (item: Zotero.Item) => item.isRegularItem?.() && !item.deleted,
   );
+  // hasPdf 现在是异步的（同步版会漏判未加载的附件）
+  const items: Zotero.Item[] = [];
+  for (const item of candidates) {
+    if (!(await hasPdf(item))) {
+      items.push(item);
+    }
+  }
   if (!items.length) {
     notify(getString("intake-all-have-pdf"), collection.name);
     return;

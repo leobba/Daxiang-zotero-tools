@@ -136,3 +136,7 @@ setting-intake-metadata =
 setting-intake-metadata-desc = 条目 Extra 里写了 mzt.pendingDoi: 10.xxxx/yyyy 时，用 Zotero 的检索翻译器抓元数据并原地补全（条目 key 与分类不变）。适合中文文献、学位论文、标准等 OpenAlex 覆盖不好的类型。
 
 setting-collection-none = （不使用）
+
+setting-intake-tag-extract =
+    .label = 新增 PDF 时标记「待抽取」
+setting-intake-tag-extract-desc = 任务分类里的条目一拿到 PDF，就给它打上「mzt/待抽取」标签。下游 agent（workbuddy）轮询这个标签来取活，抽完把标签换成「mzt/已抽取」。状态在 Zotero 里可见，重启后还在，可重试。
