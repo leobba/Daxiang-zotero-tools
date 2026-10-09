@@ -140,3 +140,7 @@ setting-collection-none = （不使用）
 setting-intake-tag-extract =
     .label = 新增 PDF 时标记「待抽取」
 setting-intake-tag-extract-desc = 任务分类里的条目一拿到 PDF，就给它打上「mzt/待抽取」标签。下游 agent（workbuddy）轮询这个标签来取活，抽完把标签换成「mzt/已抽取」。状态在 Zotero 里可见，重启后还在，可重试。
+
+setting-intake-tag-missing-pdf =
+    .label = 给缺 PDF 的文献打「mzt/无PDF」标签
+setting-intake-tag-missing-pdf-desc = 没有 PDF 附件的条目自动打上「mzt/无PDF」；后来补上了 PDF 会自动摘掉，所以标签始终反映现状。可以用它一眼筛出缺 PDF 的文献。菜单里也有手动触发的命令（未设置任务分类时扫整个文库）。

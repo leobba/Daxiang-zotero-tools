@@ -42,8 +42,16 @@ const MENU_ID = `${config.addonRef}-intake-menu`;
 const PENDING_DOI_KEY = "mzt.pendingDoi";
 /** Extra 里的标记：强制插件处理该条目（用于 agent 覆盖任务分类） */
 const INTAKE_FLAG_KEY = "mzt.intake";
-/** 找不到 PDF 时打的标签 */
-const MISSING_PDF_TAG = "mzt/需手动获取PDF";
+/**
+ * 缺 PDF 的标签。
+ *
+ * 语义：**当前没有 PDF 附件**。找到 PDF 时会自动移除，所以它始终反映现状。
+ *
+ * 旧名 `mzt/需手动获取PDF` 已合并到这一个标签 —— 两个语义重叠的标签会让人
+ * 不知道该按哪个筛。而且旧标签因为 `isPDF()` 方法名写错（应为 `isPDFAttachment()`）
+ * 从未真正生效过，所以合并没有迁移成本。
+ */
+const MISSING_PDF_TAG = "mzt/无PDF";
 /** 收集事件的防抖窗口：agent 可能一次建几百条，攒一批再处理 */
 const FLUSH_DELAY = 3000;
 
@@ -61,6 +69,8 @@ export {
   parseExtraMarker,
   markPendingExtraction,
   pickExtractionTargets,
+  syncMissingPdfTags,
+  tagMissingPdfOnDemand,
   PENDING_DOI_KEY,
   INTAKE_FLAG_KEY,
   MISSING_PDF_TAG,
@@ -113,6 +123,19 @@ function registerMenu(): void {
         },
         onCommand: () => {
           void findPdfForTaskCollection();
+        },
+      },
+      {
+        menuType: "menuitem",
+        l10nID: getLocaleID("menu-intake-tag-missing-pdf"),
+        onShowing: (event: any) => {
+          const element = event?.target as any;
+          if (element) {
+            element.hidden = !getPref("intake.enabled");
+          }
+        },
+        onCommand: () => {
+          void tagMissingPdfOnDemand();
         },
       },
       {
@@ -341,6 +364,11 @@ async function flushPending(): Promise<void> {
       ...fromAttachments,
       ...targets,
     ]);
+
+    // 3a. 同步「缺 PDF」标签（找到 PDF 的摘标签、仍没有的打标签）
+    await syncMissingPdfTags(candidatesForExtraction);
+
+    // 3b. 打「待抽取」标签（只对有 PDF 的）
     await markPendingExtraction(candidatesForExtraction);
   } catch (e) {
     Zotero.logError(e as Error);
@@ -522,7 +550,7 @@ function applyMetadata(target: Zotero.Item, source: any): void {
 /* 查找可用 PDF                                                        */
 /* ------------------------------------------------------------------ */
 
-/** 用 Zotero 官方的「查找可用 PDF」，并给失败的条目打标签 */
+/** 用 Zotero 官方的「查找可用 PDF」 */
 async function findPdfs(items: Zotero.Item[]): Promise<void> {
   Zotero.debug(`[MyZoteroTools] 为 ${items.length} 条查找可用 PDF`);
   try {
@@ -530,19 +558,86 @@ async function findPdfs(items: Zotero.Item[]): Promise<void> {
   } catch (e) {
     Zotero.debug(`[MyZoteroTools] 查找可用 PDF 失败: ${e}`);
   }
+}
 
-  // 复查：仍然没有 PDF 的，打标签标记出来（不假装成功）
+/**
+ * 给「没有 PDF 附件」的条目打标签，并**移除已有 PDF 条目上的标签**。
+ *
+ * 两边都要做：只加不减的话，标签会过期 —— 用户后来补上了 PDF，
+ * 标签还挂着，按它筛就会筛出错的集合。
+ *
+ * 这是「自动给没有 PDF 附件的文献打标签」的实现。
+ */
+async function syncMissingPdfTags(items: Zotero.Item[]): Promise<number> {
+  if (!getPref("intake.tagMissingPdf")) {
+    return 0;
+  }
+  let changed = 0;
   for (const item of items) {
     try {
-      if (await hasPdf(item)) {
+      if (!item.isRegularItem?.() || item.deleted) {
         continue;
       }
-      item.addTag(MISSING_PDF_TAG, 0);
-      await item.saveTx();
+      const has = await hasPdf(item);
+      const tagged = item.hasTag(MISSING_PDF_TAG);
+      if (has && tagged) {
+        // 补上了 PDF → 摘掉标签，保持标签反映现状
+        item.removeTag(MISSING_PDF_TAG);
+        await item.saveTx();
+        changed++;
+      } else if (!has && !tagged) {
+        item.addTag(MISSING_PDF_TAG, 0);
+        await item.saveTx();
+        changed++;
+      }
     } catch (e) {
-      Zotero.debug(`[MyZoteroTools] 标记缺 PDF 失败 (${item.key}): ${e}`);
+      Zotero.debug(`[MyZoteroTools] 同步缺 PDF 标签失败 (${item.key}): ${e}`);
     }
   }
+  if (changed) {
+    Zotero.debug(`[MyZoteroTools] 缺 PDF 标签变动 ${changed} 条`);
+  }
+  return changed;
+}
+
+/**
+ * 扫描任务分类，给缺 PDF 的条目补标签。
+ *
+ * 未设置任务分类时退回**整个文库** —— 这个命令的用途就是「一眼看出哪些文献没 PDF」，
+ * 没有任务分类也应该能用。
+ */
+async function tagMissingPdfOnDemand(): Promise<void> {
+  const collection = await resolveTaskCollection();
+  let items: Zotero.Item[];
+  let scope: string;
+
+  if (collection) {
+    scope = collection.name;
+    items = (collection.getChildItems(false) ?? []).filter(
+      (item: Zotero.Item) => item.isRegularItem?.() && !item.deleted,
+    );
+  } else {
+    scope = getString("intake-scope-whole-library");
+    const ids: number[] = await (Zotero.Items as any).getAllIDs(
+      Zotero.Libraries.userLibraryID,
+    );
+    const all = ((await Zotero.Items.getAsync(ids)) ?? []) as Zotero.Item[];
+    items = all.filter((item) => item?.isRegularItem?.() && !item.deleted);
+  }
+
+  notify(
+    getString("intake-tagging-missing-pdf"),
+    getString("intake-tagging-missing-pdf-detail", {
+      args: { count: items.length, scope },
+    }),
+  );
+  const changed = await syncMissingPdfTags(items);
+  notify(
+    getString("intake-tagged-missing-pdf"),
+    getString("intake-tagged-missing-pdf-detail", {
+      args: { changed, scope },
+    }),
+  );
 }
 
 /**

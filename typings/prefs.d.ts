@@ -34,6 +34,7 @@ declare namespace _ZoteroTypes {
       "intake.autoFindPdf": boolean;
       "intake.resolveMetadata": boolean;
       "intake.tagForExtraction": boolean;
+      "intake.tagMissingPdf": boolean;
       "dev.openPrefsOnStart": boolean;
       "dev.initialCategory": string;
     };

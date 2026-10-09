@@ -129,3 +129,12 @@ menu-intake-mark-extract =
     .label = Tag pending extraction items in the task collection…
 intake-marked = Extraction tags applied
 intake-marked-detail = { $count } item(s) in "{ $name }" newly tagged as pending extraction.
+
+# ---- Missing-PDF tag ----
+menu-intake-tag-missing-pdf =
+    .label = Tag items missing a PDF…
+intake-tagging-missing-pdf = Checking PDF attachments
+intake-tagging-missing-pdf-detail = Scope: { $scope } ({ $count } items), checking each…
+intake-tagged-missing-pdf = Missing-PDF tags synced
+intake-tagged-missing-pdf-detail = Scope: { $scope }, { $changed } item(s) changed (tag added or removed).
+intake-scope-whole-library = the whole library (no task collection set)

@@ -140,3 +140,7 @@ setting-collection-none = (none)
 setting-intake-tag-extract =
     .label = Tag "pending extraction" when a PDF arrives
 setting-intake-tag-extract-desc = As soon as an item in the task collection gets a PDF, it is tagged "mzt/待抽取". A downstream agent (workbuddy) polls for that tag, then swaps it for "mzt/已抽取" when done. The state lives in Zotero, survives restarts, and can be retried.
+
+setting-intake-tag-missing-pdf =
+    .label = Tag items without a PDF as "mzt/无PDF"
+setting-intake-tag-missing-pdf-desc = Items with no PDF attachment are tagged "mzt/无PDF"; the tag is removed automatically once a PDF arrives, so it always reflects the current state. Use it to list everything missing a PDF. There is also a manual command in the Tools menu (it scans the whole library when no task collection is set).

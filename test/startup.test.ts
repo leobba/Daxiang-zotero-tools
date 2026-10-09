@@ -1861,6 +1861,124 @@ describe("MyZoteroTools", function () {
     );
   });
 
+  /* ------------------------------------------------------------------ */
+  /* 缺 PDF 标签：自动标记没有 PDF 附件的文献                              */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * 【核心】没有 PDF 的条目会被打上 mzt/无PDF；有 PDF 的会被摘掉。
+   *
+   * 两边都要做 —— 只加不减的话标签会过期：用户后来补上了 PDF，
+   * 标签还挂着，按它筛就会筛出错的集合。
+   */
+  it("缺 PDF 标签：无 PDF 的打标签，有 PDF 的摘标签", async function () {
+    // 找一个「有 PDF」和一个「没有 PDF」的常规条目
+    const rows = await Zotero.DB.queryAsync(
+      `SELECT i.itemID AS id,
+              EXISTS(SELECT 1 FROM itemAttachments ia
+                      WHERE ia.parentItemID = i.itemID
+                        AND ia.contentType = 'application/pdf'
+                        AND ia.itemID NOT IN (SELECT itemID FROM deletedItems)) AS hasPdf
+         FROM items i
+        WHERE i.itemTypeID NOT IN (
+                SELECT itemTypeID FROM itemTypes
+                 WHERE typeName IN ('attachment','note','annotation'))
+          AND i.itemID NOT IN (SELECT itemID FROM deletedItems)
+        LIMIT 60`,
+    );
+    const withPdf = rows.find((r) => r.hasPdf);
+    const withoutPdf = rows.find((r) => !r.hasPdf);
+    assert.ok(withPdf, "测试库里没有带 PDF 的条目");
+    assert.ok(withoutPdf, "测试库里没有不带 PDF 的条目");
+
+    const itemA = (await Zotero.Items.getAsync(withPdf.id)) as Zotero.Item;
+    const itemB = (await Zotero.Items.getAsync(withoutPdf.id)) as Zotero.Item;
+
+    // 记录原始状态以便还原
+    const origA = itemA.hasTag(literatureIntake.MISSING_PDF_TAG);
+    const origB = itemB.hasTag(literatureIntake.MISSING_PDF_TAG);
+    try {
+      // 故意把状态搞反：有 PDF 的挂上标签，没 PDF 的不挂
+      if (!origA) itemA.addTag(literatureIntake.MISSING_PDF_TAG, 0);
+      if (origB) itemB.removeTag(literatureIntake.MISSING_PDF_TAG);
+      await itemA.saveTx();
+      await itemB.saveTx();
+
+      const changed = await literatureIntake.syncMissingPdfTags([itemA, itemB]);
+      assert.equal(changed, 2, "两条都应当有变动");
+
+      assert.isFalse(
+        itemA.hasTag(literatureIntake.MISSING_PDF_TAG),
+        "有 PDF 的条目应当被摘掉标签",
+      );
+      assert.isTrue(
+        itemB.hasTag(literatureIntake.MISSING_PDF_TAG),
+        "没有 PDF 的条目应当被打上标签",
+      );
+    } finally {
+      for (const [item, orig] of [
+        [itemA, origA],
+        [itemB, origB],
+      ] as Array<[Zotero.Item, boolean]>) {
+        if (orig && !item.hasTag(literatureIntake.MISSING_PDF_TAG)) {
+          item.addTag(literatureIntake.MISSING_PDF_TAG, 0);
+        } else if (!orig && item.hasTag(literatureIntake.MISSING_PDF_TAG)) {
+          item.removeTag(literatureIntake.MISSING_PDF_TAG);
+        }
+        await item.saveTx();
+      }
+    }
+  });
+
+  /** 幂等：状态已经正确时不该产生变动（避免无意义的 saveTx） */
+  it("缺 PDF 标签：状态已正确时不产生变动（幂等）", async function () {
+    const rows = await Zotero.DB.queryAsync(
+      `SELECT i.itemID AS id
+         FROM items i
+        WHERE i.itemTypeID NOT IN (
+                SELECT itemTypeID FROM itemTypes
+                 WHERE typeName IN ('attachment','note','annotation'))
+          AND i.itemID NOT IN (SELECT itemID FROM deletedItems)
+          AND NOT EXISTS(SELECT 1 FROM itemAttachments ia
+                          WHERE ia.parentItemID = i.itemID
+                            AND ia.contentType = 'application/pdf'
+                            AND ia.itemID NOT IN (SELECT itemID FROM deletedItems))
+        LIMIT 1`,
+    );
+    assert.isAbove(rows?.length ?? 0, 0, "测试库里没有不带 PDF 的条目");
+    const item = (await Zotero.Items.getAsync(rows[0].id)) as Zotero.Item;
+    const orig = item.hasTag(literatureIntake.MISSING_PDF_TAG);
+    try {
+      if (!orig) item.addTag(literatureIntake.MISSING_PDF_TAG, 0);
+      await item.saveTx();
+      const changed = await literatureIntake.syncMissingPdfTags([item]);
+      assert.equal(changed, 0, "状态已正确，不应有变动");
+    } finally {
+      if (!orig && item.hasTag(literatureIntake.MISSING_PDF_TAG)) {
+        item.removeTag(literatureIntake.MISSING_PDF_TAG);
+        await item.saveTx();
+      }
+    }
+  });
+
+  /** 附件 / 笔记 / 批注不该被打标签 —— 它们不是"文献" */
+  it("缺 PDF 标签：附件与笔记不会被标记", async function () {
+    const attachment = await firstAttachment();
+    assert.ok(attachment, "测试库里没有附件");
+    const changed = await literatureIntake.syncMissingPdfTags([attachment]);
+    assert.equal(changed, 0, "附件不应被标记");
+    assert.isFalse(attachment.hasTag(literatureIntake.MISSING_PDF_TAG));
+  });
+
+  /** 标签名已合并：不应再有旧名残留 */
+  it("缺 PDF 标签：用的是合并后的新名 mzt/无PDF", function () {
+    assert.equal(
+      literatureIntake.MISSING_PDF_TAG,
+      "mzt/无PDF",
+      "标签名应为合并后的 mzt/无PDF",
+    );
+  });
+
   /** 任务分类必须是下拉，不能是输入框 —— 手填名字在同名分类时会选错 */
   it("设置：任务分类是下拉控件且绑定了动态来源", function () {
     const category = SETTINGS_CATEGORIES.find((c) => c.id === "intake");

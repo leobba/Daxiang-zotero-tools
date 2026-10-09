@@ -265,6 +265,12 @@ export const SETTINGS_CATEGORIES: SettingCategory[] = [
         labelKey: "setting-intake-tag-extract",
         descKey: "setting-intake-tag-extract-desc",
       },
+      {
+        key: "intake.tagMissingPdf",
+        kind: "checkbox",
+        labelKey: "setting-intake-tag-missing-pdf",
+        descKey: "setting-intake-tag-missing-pdf-desc",
+      },
     ],
   },
 

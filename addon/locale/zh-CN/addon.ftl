@@ -129,3 +129,12 @@ menu-intake-mark-extract =
     .label = 为任务分类补打「待抽取」标签…
 intake-marked = 待抽取标记完成
 intake-marked-detail = 分类「{ $name }」下有 { $count } 条新标记为待抽取。
+
+# ---- 缺 PDF 标签 ----
+menu-intake-tag-missing-pdf =
+    .label = 给缺 PDF 的文献打标签…
+intake-tagging-missing-pdf = 正在检查 PDF 附件
+intake-tagging-missing-pdf-detail = 范围：{ $scope }（{ $count } 条），正在逐条检查…
+intake-tagged-missing-pdf = 缺 PDF 标签已同步
+intake-tagged-missing-pdf-detail = 范围：{ $scope }，{ $changed } 条的标签有变动（新增或摘除）。
+intake-scope-whole-library = 整个文库（未设置任务分类）

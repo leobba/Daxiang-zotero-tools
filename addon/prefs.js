@@ -53,6 +53,9 @@ pref("intake.resolveMetadata", true);
 // 任务分类里新增 PDF 时，给父条目打「mzt/待抽取」标签，通知下游 agent 开始抽取。
 // 下游（workbuddy）轮询 Local API 取这些条目，抽完把标签换成「mzt/已抽取」。
 pref("intake.tagForExtraction", true);
+// 自动给「没有 PDF 附件」的条目打 mzt/无PDF 标签；补上 PDF 时自动摘掉。
+// 目的是能一眼筛出缺 PDF 的文献（菜单里也有手动触发的命令）。
+pref("intake.tagMissingPdf", true);
 
 // 开发用开关（不出现在设置面板里）。打开方式：在开发 profile 的 prefs.js 里写入
 //   user_pref("extensions.zotero.myzoterotools.dev.openPrefsOnStart", true);
